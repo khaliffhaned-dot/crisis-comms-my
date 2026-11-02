@@ -2,13 +2,17 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import Landing from './Landing'
 import Manual from './Manual'
 import OpsDashboard from './OpsDashboard'
+import First60Module from './First60Module'
+import ClocksModule from './ClocksModule'
+import CoreFiveModule from './CoreFiveModule'
+import { MODULES, type ShellSection } from './moduleConfig'
+import { SEVERITY_DATA, FIRST_60_STEPS } from './playbookData'
 import './index.css'
 import './modules.css'
 
 type Lang = 'bm' | 'en'
-type Mode = 'landing' | 'playbook' | 'manual'
+type Mode = 'landing' | 'app'
 type Severity = 1 | 2 | 3 | 4 | null
-type ShellSection = 'playbook' | 'manual' | 'severity' | 'checklist' | 'statements' | 'log'
 
 interface LogEntry { id: number; time: string; text: string }
 interface Client { id: string; name: string; short: string; market: string }
@@ -18,66 +22,6 @@ const CLIENTS: Client[] = [
   { id: 'ace-tech', name: 'ACE Tech Solutions', short: 'AT', market: 'ACE Market' },
   { id: 'sabah-infra', name: 'Sabah Infra Group', short: 'SI', market: 'Main Market' },
 ]
-
-const SEVERITY_DATA = {
-  1: {
-    en: 'Level 1 – Routine Operational Issue', bm: 'Tahap 1 – Isu Operasi Biasa',
-    actionEn: 'Monitor closely. Prepare holding language if needed.',
-    actionBm: 'Pantau dengan teliti. Sediakan bahasa kenyataan awal jika perlu.',
-    criteriaEn: ['Limited operational impact', 'No material investor interest', 'Contained locally'],
-    criteriaBm: ['Kesan operasi terhad', 'Tiada minat pelabur material', 'Terkawal di peringkat tempatan'],
-    notifyEn: ['Ops Lead', 'Comms Officer'], notifyBm: ['Ketua Operasi', 'Pegawai Komunikasi'], bursa: false,
-  },
-  2: {
-    en: 'Level 2 – Moderate Incident', bm: 'Tahap 2 – Insiden Sederhana',
-    actionEn: 'Activate core Crisis Team. Issue holding statement. Intensify monitoring.',
-    actionBm: 'Aktifkan Pasukan Krisis teras. Keluarkan kenyataan awal. Perhebat pemantauan.',
-    criteriaEn: ['Media or community attention rising', 'Potential reputational risk', 'May need holding statement within the hour'],
-    criteriaBm: ['Perhatian media atau komuniti meningkat', 'Risiko reputasi berpotensi', 'Mungkin perlu kenyataan awal dalam sejam'],
-    notifyEn: ['Crisis Lead', 'Company Secretary', 'Comms Head'], notifyBm: ['Ketua Krisis', 'Setiausaha Syarikat', 'Ketua Komunikasi'], bursa: false,
-  },
-  3: {
-    en: 'Level 3 – Material Crisis', bm: 'Tahap 3 – Krisis Material',
-    actionEn: 'Full activation. Notify Board. Assess Bursa disclosure obligation.',
-    actionBm: 'Pengaktifan penuh. Maklumkan Lembaga Pengarah. Nilai kewajipan pendedahan Bursa.',
-    criteriaEn: ['Material information likely', 'Board-level attention required', 'Bursa disclosure assessment mandatory'],
-    criteriaBm: ['Maklumat material berkemungkinan', 'Perhatian tahap Lembaga diperlukan', 'Penilaian pendedahan Bursa wajib'],
-    notifyEn: ['Board Chair', 'CEO', 'Company Secretary', 'Crisis Lead', 'Legal'], notifyBm: ['Pengerusi Lembaga', 'CEO', 'Setiausaha Syarikat', 'Ketua Krisis', 'Undang-undang'], bursa: true,
-  },
-  4: {
-    en: 'Level 4 – Critical Crisis', bm: 'Tahap 4 – Krisis Kritikal',
-    actionEn: 'Highest-level response. Continuous Board and regulatory engagement.',
-    actionBm: 'Respons tahap tertinggi. Penglibatan berterusan dengan Lembaga dan pengawal selia.',
-    criteriaEn: ['Systemic or multi-stakeholder impact', 'Continuous regulatory engagement', 'Dedicated war-room recommended'],
-    criteriaBm: ['Kesan sistemik atau berbilang pihak', 'Penglibatan pengawal selia berterusan', 'Bilik perang khusus disyorkan'],
-    notifyEn: ['Full Board', 'CEO', 'Regulators as required', 'External counsel', 'Crisis Team'], notifyBm: ['Lembaga penuh', 'CEO', 'Pengawal selia jika perlu', 'Peguam luar', 'Pasukan Krisis'], bursa: true,
-  },
-}
-
-const CHECKLIST_ITEMS = {
-  en: [
-    { text: 'Facts confirmed and source verified', owner: 'Comms / Ops', mins: 10, critical: true },
-    { text: 'Severity level assessed and recorded', owner: 'Crisis Lead', mins: 15, critical: true },
-    { text: 'Crisis Lead and Company Secretary notified', owner: 'Crisis Lead', mins: 15, critical: true },
-    { text: 'Disclosure assessment initiated (Bursa LR)', owner: 'Company Secretary', mins: 30, critical: true },
-    { text: 'Holding statement drafted and cleared', owner: 'Comms', mins: 45, critical: true },
-    { text: 'Spokespeople aligned; others instructed not to comment', owner: 'Comms', mins: 30, critical: false },
-    { text: 'Media and social monitoring activated', owner: 'Comms / Digital', mins: 20, critical: false },
-    { text: 'Decision log started', owner: 'Crisis Lead', mins: 15, critical: false },
-    { text: 'Board notification considered / completed (Level 3+)', owner: 'CEO / Sec', mins: 60, critical: true },
-  ],
-  bm: [
-    { text: 'Fakta disahkan dan sumber disahkan', owner: 'Komunikasi / Ops', mins: 10, critical: true },
-    { text: 'Tahap keterukan dinilai dan direkodkan', owner: 'Ketua Krisis', mins: 15, critical: true },
-    { text: 'Ketua Krisis dan Setiausaha Syarikat dimaklumkan', owner: 'Ketua Krisis', mins: 15, critical: true },
-    { text: 'Penilaian pendedahan dimulakan (Peraturan Bursa)', owner: 'Setiausaha Syarikat', mins: 30, critical: true },
-    { text: 'Kenyataan awal digubal dan diluluskan', owner: 'Komunikasi', mins: 45, critical: true },
-    { text: 'Jurucakap diselaraskan; yang lain diarahkan tidak memberi komen', owner: 'Komunikasi', mins: 30, critical: false },
-    { text: 'Pemantauan media dan sosial diaktifkan', owner: 'Komunikasi / Digital', mins: 20, critical: false },
-    { text: 'Log keputusan dimulakan', owner: 'Ketua Krisis', mins: 15, critical: false },
-    { text: 'Pemberitahuan Lembaga dipertimbangkan / selesai (Tahap 3+)', owner: 'CEO / Sec', mins: 60, critical: true },
-  ],
-}
 
 const SCENARIOS = {
   en: [
@@ -128,12 +72,13 @@ const STATEMENTS: Record<string, { en: string; bm: string }> = {
 function App() {
   const [lang, setLang] = useState<Lang>('bm')
   const [mode, setMode] = useState<Mode>('landing')
-  const [section, setSection] = useState<ShellSection>('playbook')
+  const [section, setSection] = useState<ShellSection>('command')
   const [clientId, setClientId] = useState(CLIENTS[0].id)
   const [clientOpen, setClientOpen] = useState(false)
   const clientRef = useRef<HTMLDivElement>(null)
   const [severity, setSeverity] = useState<Severity>(null)
-  const [checked, setChecked] = useState<boolean[]>(Array(9).fill(false))
+  const [checked, setChecked] = useState<boolean[]>(() => Array(FIRST_60_STEPS.en.length).fill(false))
+  const [clocksStarted, setClocksStarted] = useState<Record<string, boolean>>({})
   const [scenario, setScenario] = useState('operational')
   const [audience, setAudience] = useState('media')
   const [manualLog, setManualLog] = useState('')
@@ -166,14 +111,31 @@ function App() {
   }
 
   const toggleCheck = (idx: number) => {
-    setChecked((prev) => { const next = [...prev]; next[idx] = !next[idx]; return next })
+    setChecked((prev) => {
+      const next = [...prev]
+      next[idx] = !next[idx]
+      return next
+    })
+  }
+
+  const toggleClock = (id: string) => {
+    setClocksStarted((prev) => {
+      const next = { ...prev, [id]: !prev[id] }
+      if (next[id]) addLog(t(`Clock started: ${id}`, `Jam dimulakan: ${id}`))
+      return next
+    })
   }
 
   const generateStatement = () => {
     let text = STATEMENTS[scenario]?.[lang] || ''
     text = text.replace(/\[Company Name\]/g, client.name).replace(/\[Nama Syarikat\]/g, client.name)
     setStatement(text)
-    addLog(t(`Generated holding statement: ${SCENARIOS.en.find((s) => s.id === scenario)?.label}`, `Menjana kenyataan awal: ${SCENARIOS.bm.find((s) => s.id === scenario)?.label}`))
+    addLog(
+      t(
+        `Generated holding statement: ${SCENARIOS.en.find((s) => s.id === scenario)?.label}`,
+        `Menjana kenyataan awal: ${SCENARIOS.bm.find((s) => s.id === scenario)?.label}`
+      )
+    )
   }
 
   const copyStatement = async () => {
@@ -183,7 +145,9 @@ function App() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
       addLog(t('Statement copied to clipboard', 'Kenyataan disalin ke papan keratan'))
-    } catch { addLog(t('Copy failed', 'Salinan gagal')) }
+    } catch {
+      addLog(t('Copy failed', 'Salinan gagal'))
+    }
   }
 
   const downloadStatement = () => {
@@ -218,59 +182,97 @@ function App() {
   }
 
   const clearLog = () => setLog([])
-  const goShell = (s: ShellSection) => { setSection(s); setMode(s === 'manual' ? 'manual' : 'playbook') }
 
-  const pageTitle =
-    section === 'manual' ? t('Manual', 'Manual')
-    : section === 'severity' ? t('Severity', 'Keterukan')
-    : section === 'checklist' ? t('First Sixty Minutes', 'Enam Puluh Minit Pertama')
-    : section === 'statements' ? t('Holding Statements', 'Kenyataan Awal')
-    : section === 'log' ? t('Decision Log', 'Log Keputusan')
-    : t('Operational Playbook', 'Playbook Operasi')
+  const goShell = (s: ShellSection) => {
+    setSection(s)
+    setMode('app')
+  }
+
+  const pageTitle = (() => {
+    const mod = MODULES.find((m) => m.id === section)
+    return mod ? (lang === 'bm' ? mod.bm : mod.en) : t('Command', 'Perintah')
+  })()
 
   if (mode === 'landing') {
     return (
-      <Landing lang={lang}
-        onEnterPlaybook={() => { setSection('playbook'); setMode('playbook') }}
-        onEnterManual={() => { setSection('manual'); setMode('manual') }}
-        onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))} />
+      <Landing
+        lang={lang}
+        onEnterPlaybook={() => {
+          setSection('command')
+          setMode('app')
+        }}
+        onEnterManual={() => {
+          setSection('manual')
+          setMode('app')
+        }}
+        onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
+      />
     )
   }
 
-  const showFullPlaybook = section === 'playbook'
-  const showSeverity = showFullPlaybook || section === 'severity'
-  const showChecklist = showFullPlaybook || section === 'checklist'
-  const showStatements = showFullPlaybook || section === 'statements'
-  const showLog = showFullPlaybook || section === 'log'
+  const opsIds = MODULES.filter((m) => m.group === 'ops').map((m) => m.id)
+  const isOpsActive = opsIds.includes(section)
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar__header">
           <div className="sidebar__logo-wrapper">
-            <span className="sidebar__title" onClick={() => setMode('landing')}>Escalate <span className="sidebar__title-v">MY</span></span>
+            <span className="sidebar__title" onClick={() => setMode('landing')}>
+              Escalate <span className="sidebar__title-v">MY</span>
+            </span>
           </div>
-          <div className="sidebar__tagline">{t('Crisis communications', 'Komunikasi krisis')}</div>
+          <div className="sidebar__tagline">
+            {t('Crisis communications', 'Komunikasi krisis')}
+          </div>
         </div>
+
         <nav className="sidebar__nav">
           <div className="nav-pillar">
-            <button type="button" className={`nav-item ${section === 'playbook' || ['severity','checklist','statements','log'].includes(section) ? 'active-parent' : ''}`} onClick={() => goShell('playbook')}>
-              <span className="nav-item__content"><span className="nav-item__icon">⚡</span><span className="nav-item__text">{t('Playbook', 'Playbook')}</span></span>
-            </button>
+            <div className={`nav-item ${isOpsActive ? 'active-parent' : ''}`} style={{ cursor: 'default' }}>
+              <span className="nav-item__content">
+                <span className="nav-item__icon">⚡</span>
+                <span className="nav-item__text">{t('Operations', 'Operasi')}</span>
+              </span>
+            </div>
             <div className="sub-nav-list">
-              <button type="button" className={`sub-nav-item ${section === 'severity' ? 'active' : ''}`} onClick={() => goShell('severity')}>{t('Severity', 'Keterukan')}</button>
-              <button type="button" className={`sub-nav-item ${section === 'checklist' ? 'active' : ''}`} onClick={() => goShell('checklist')}>{t('First 60 min', '60 min pertama')}</button>
-              <button type="button" className={`sub-nav-item ${section === 'statements' ? 'active' : ''}`} onClick={() => goShell('statements')}>{t('Statements', 'Kenyataan')}</button>
-              <button type="button" className={`sub-nav-item ${section === 'log' ? 'active' : ''}`} onClick={() => goShell('log')}>{t('Decision log', 'Log keputusan')}</button>
+              {MODULES.filter((m) => m.group === 'ops').map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`sub-nav-item ${section === m.id ? 'active' : ''}`}
+                  onClick={() => goShell(m.id)}
+                  title={lang === 'bm' ? m.descBm : m.descEn}
+                >
+                  <span style={{ marginRight: 6 }}>{m.icon}</span>
+                  {lang === 'bm' ? m.bm : m.en}
+                </button>
+              ))}
             </div>
           </div>
+
           <div className="nav-pillar">
-            <button type="button" className={`nav-item ${section === 'manual' ? 'active-parent' : ''}`} onClick={() => goShell('manual')}>
-              <span className="nav-item__content"><span className="nav-item__icon">📘</span><span className="nav-item__text">{t('Manual', 'Manual')}</span></span>
-            </button>
+            {MODULES.filter((m) => m.group === 'ref').map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`nav-item ${section === m.id ? 'active-parent' : ''}`}
+                onClick={() => goShell(m.id)}
+              >
+                <span className="nav-item__content">
+                  <span className="nav-item__icon">{m.icon}</span>
+                  <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
+                </span>
+              </button>
+            ))}
           </div>
         </nav>
-        <div className="sidebar__footer">Escalate MY · v0.3<br />{client.market}</div>
+
+        <div className="sidebar__footer">
+          Escalate MY · v1.0
+          <br />
+          {client.market}
+        </div>
       </aside>
 
       <div className="main-wrapper">
@@ -278,169 +280,317 @@ function App() {
           <h2>{pageTitle}</h2>
           <div className="shell-header__actions">
             <div className="client-switcher" ref={clientRef}>
-              <button type="button" className="client-switcher__display" onClick={() => setClientOpen((o) => !o)}>
+              <button
+                type="button"
+                className="client-switcher__display"
+                onClick={() => setClientOpen((o) => !o)}
+              >
                 <span className="client-switcher__logo">{client.short}</span>
                 <span className="client-switcher__info">
                   <span className="client-switcher__name">{client.name}</span>
-                  <span className="client-switcher__label">{t('Active client', 'Klien aktif')}</span>
+                  <span className="client-switcher__label">
+                    {t('Active client', 'Klien aktif')}
+                  </span>
                 </span>
                 <span className="client-switcher__arrow">{clientOpen ? '▴' : '▾'}</span>
               </button>
               {clientOpen && (
                 <div className="client-switcher__menu">
                   {CLIENTS.map((c) => (
-                    <button key={c.id} type="button" className={`client-switcher__option ${c.id === clientId ? 'active' : ''}`}
-                      onClick={() => { setClientId(c.id); setClientOpen(false); addLog(t(`Switched client to ${c.name}`, `Tukar klien kepada ${c.name}`)) }}>
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`client-switcher__option ${c.id === clientId ? 'active' : ''}`}
+                      onClick={() => {
+                        setClientId(c.id)
+                        setClientOpen(false)
+                        addLog(t(`Switched client to ${c.name}`, `Tukar klien kepada ${c.name}`))
+                      }}
+                    >
                       <span className="client-switcher__logo">{c.short}</span>
-                      <span><span className="client-switcher__option-name">{c.name}</span><br /><span className="client-switcher__option-meta">{c.market}</span></span>
+                      <span>
+                        <span className="client-switcher__option-name">{c.name}</span>
+                        <br />
+                        <span className="client-switcher__option-meta">{c.market}</span>
+                      </span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
+
             <div className="lang-toggle">
-              <button type="button" className={lang === 'bm' ? 'active' : ''} onClick={() => setLang('bm')}>BM</button>
-              <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
+              <button type="button" className={lang === 'bm' ? 'active' : ''} onClick={() => setLang('bm')}>
+                BM
+              </button>
+              <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>
+                EN
+              </button>
             </div>
           </div>
         </header>
 
         <div className="shell-main">
-          {section === 'manual' ? (
-            <Manual lang={lang} onBackToPlaybook={() => goShell('playbook')} />
-          ) : (
-            <>
-              {showFullPlaybook && (
-                <OpsDashboard lang={lang} t={t} client={client} severity={severity} checked={checked} statement={statement} scenario={scenario} log={log} severityData={SEVERITY_DATA} scenarios={SCENARIOS} onGoSeverity={() => goShell('severity')} onGoStatements={() => goShell('statements')} />
-              )}
+          {section === 'manual' && (
+            <Manual lang={lang} onBackToPlaybook={() => goShell('command')} />
+          )}
 
-              {showSeverity && (
-                <section className="card module-card">
-                  <div className="module-card__head">
-                    <h2><span className="step">1</span>{t('Assess Severity', 'Nilai Tahap Keterukan')}</h2>
-                    <span className="module-card__badge">{severity ? t(`Selected: L${severity}`, `Dipilih: T${severity}`) : t('Not set', 'Belum ditetapkan')}</span>
+          {section === 'command' && (
+            <OpsDashboard
+              lang={lang}
+              t={t}
+              client={client}
+              severity={severity}
+              checked={checked}
+              statement={statement}
+              scenario={scenario}
+              log={log}
+              severityData={SEVERITY_DATA as any}
+              scenarios={SCENARIOS}
+              onGoSeverity={() => goShell('severity')}
+              onGoStatements={() => goShell('statements')}
+            />
+          )}
+
+          {section === 'severity' && (
+            <section className="card module-card">
+              <div className="module-card__head">
+                <h2>
+                  <span className="step">1</span>
+                  {t('Assess Severity', 'Nilai Tahap Keterukan')}
+                </h2>
+                <span className="module-card__badge">
+                  {severity
+                    ? t(`Selected: L${severity}`, `Dipilih: T${severity}`)
+                    : t('Not set', 'Belum ditetapkan')}
+                </span>
+              </div>
+              <p className="module-lead">
+                {t(
+                  'Select the level that best matches impact, media pressure, and disclosure risk. Level 3+ triggers Board and Bursa assessment.',
+                  'Pilih tahap yang paling sepadan dengan kesan, tekanan media, dan risiko pendedahan. Tahap 3+ mencetuskan penilaian Lembaga dan Bursa.'
+                )}
+              </p>
+              <div className="severity-grid severity-grid--rich">
+                {([1, 2, 3, 4] as const).map((level) => {
+                  const d = SEVERITY_DATA[level]
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      className={`severity-btn level-${level} ${severity === level ? 'selected' : ''}`}
+                      onClick={() => handleSeverity(level)}
+                    >
+                      <span className="severity-btn__top">
+                        <span className="level">{t(`Level ${level}`, `Tahap ${level}`)}</span>
+                        {d.bursa && <span className="bursa-chip">Bursa</span>}
+                      </span>
+                      <span className="bm">
+                        {lang === 'bm' ? d.shortBm : d.shortEn}
+                      </span>
+                      <ul className="severity-criteria">
+                        {(lang === 'bm' ? d.criteriaBm : d.criteriaEn).map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
+                    </button>
+                  )
+                })}
+              </div>
+              {severity && (
+                <div className="severity-detail">
+                  <div className="severity-detail__action">
+                    <strong>{t('Recommended action', 'Tindakan disyorkan')}</strong>
+                    <p>{lang === 'bm' ? SEVERITY_DATA[severity].actionBm : SEVERITY_DATA[severity].actionEn}</p>
+                    <p style={{ marginTop: 8, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      {t('Convenes', 'Bersidang')}:{' '}
+                      {lang === 'bm'
+                        ? SEVERITY_DATA[severity].convenesBm
+                        : SEVERITY_DATA[severity].convenesEn}
+                      {' · '}
+                      {t('Approves', 'Meluluskan')}:{' '}
+                      {lang === 'bm'
+                        ? SEVERITY_DATA[severity].approvesBm
+                        : SEVERITY_DATA[severity].approvesEn}
+                    </p>
                   </div>
-                  <p className="module-lead">{t('Select the level that best matches impact, media pressure, and disclosure risk. Level 3+ triggers Board and Bursa assessment.', 'Pilih tahap yang paling sepadan dengan kesan, tekanan media, dan risiko pendedahan. Tahap 3+ mencetuskan penilaian Lembaga dan Bursa.')}</p>
-                  <div className="severity-grid severity-grid--rich">
-                    {([1, 2, 3, 4] as const).map((level) => {
-                      const d = SEVERITY_DATA[level]
-                      return (
-                        <button key={level} type="button" className={`severity-btn level-${level} ${severity === level ? 'selected' : ''}`} onClick={() => handleSeverity(level)}>
-                          <span className="severity-btn__top">
-                            <span className="level">{t(`Level ${level}`, `Tahap ${level}`)}</span>
-                            {d.bursa && <span className="bursa-chip">Bursa</span>}
-                          </span>
-                          <span className="bm">{lang === 'bm' ? d.bm.replace(`Tahap ${level} – `, '') : d.en.replace(`Level ${level} – `, '')}</span>
-                          <ul className="severity-criteria">{(lang === 'bm' ? d.criteriaBm : d.criteriaEn).map((c, i) => <li key={i}>{c}</li>)}</ul>
-                        </button>
-                      )
-                    })}
+                  <div className="severity-detail__notify">
+                    <strong>{t('Notify now', 'Maklumkan sekarang')}</strong>
+                    <div className="notify-chips">
+                      {(lang === 'bm'
+                        ? SEVERITY_DATA[severity].notifyBm
+                        : SEVERITY_DATA[severity].notifyEn
+                      ).map((n) => (
+                        <span key={n} className="notify-chip">{n}</span>
+                      ))}
+                    </div>
                   </div>
-                  {severity && (
-                    <div className="severity-detail">
-                      <div className="severity-detail__action">
-                        <strong>{t('Recommended action', 'Tindakan disyorkan')}</strong>
-                        <p>{lang === 'bm' ? SEVERITY_DATA[severity].actionBm : SEVERITY_DATA[severity].actionEn}</p>
-                      </div>
-                      <div className="severity-detail__notify">
-                        <strong>{t('Notify now', 'Maklumkan sekarang')}</strong>
-                        <div className="notify-chips">{(lang === 'bm' ? SEVERITY_DATA[severity].notifyBm : SEVERITY_DATA[severity].notifyEn).map((n) => <span key={n} className="notify-chip">{n}</span>)}</div>
-                      </div>
-                      {SEVERITY_DATA[severity].bursa && (
-                        <div className="bursa-alert">{t('Disclosure assessment required under Bursa Malaysia Listing Requirements. Involve Company Secretary before any external statement.', 'Penilaian pendedahan diperlukan di bawah Peraturan Penyenaraian Bursa Malaysia. Libatkan Setiausaha Syarikat sebelum sebarang kenyataan luaran.')}</div>
+                  {SEVERITY_DATA[severity].bursa && (
+                    <div className="bursa-alert">
+                      {t(
+                        'Disclosure assessment required under Bursa Malaysia Listing Requirements. Involve Company Secretary before any external statement.',
+                        'Penilaian pendedahan diperlukan di bawah Peraturan Penyenaraian Bursa Malaysia. Libatkan Setiausaha Syarikat sebelum sebarang kenyataan luaran.'
                       )}
                     </div>
                   )}
-                </section>
+                </div>
               )}
+            </section>
+          )}
 
-              {showChecklist && (
-                <section className="card module-card">
-                  <div className="module-card__head">
-                    <h2><span className="step">2</span>{t('First Sixty Minutes Checklist', 'Senarai Semak Enam Puluh Minit Pertama')}</h2>
-                    <span className="module-card__badge">{checked.filter(Boolean).length}/9 · {Math.round((checked.filter(Boolean).length / 9) * 100)}%</span>
-                  </div>
-                  <div className="checklist-progress"><div className="checklist-progress__fill" style={{ width: `${(checked.filter(Boolean).length / 9) * 100}%` }} /></div>
-                  <p className="module-lead">{t('Work top-down. Critical items are marked. Target times are guides for the first hour.', 'Kerjakan dari atas ke bawah. Item kritikal ditanda. Masa sasaran adalah panduan untuk sejam pertama.')}</p>
-                  <ul className="checklist checklist--rich">
-                    {CHECKLIST_ITEMS[lang].map((item, idx) => (
-                      <li key={idx} className={checked[idx] ? 'done' : ''}>
-                        <label className="checklist-row">
-                          <input type="checkbox" checked={checked[idx]} onChange={() => toggleCheck(idx)} />
-                          <span className="checklist-row__body">
-                            <span className="checklist-row__text">{item.text}{item.critical && <span className="crit-tag">{t('Critical', 'Kritikal')}</span>}</span>
-                            <span className="checklist-row__meta"><span>{item.owner}</span><span>≤ {item.mins} {t('min', 'min')}</span></span>
-                          </span>
-                        </label>
+          {section === 'first60' && (
+            <First60Module lang={lang} t={t} checked={checked} onToggle={toggleCheck} />
+          )}
+
+          {section === 'clocks' && (
+            <ClocksModule
+              lang={lang}
+              t={t}
+              started={clocksStarted}
+              onToggle={toggleClock}
+            />
+          )}
+
+          {section === 'corefive' && <CoreFiveModule lang={lang} t={t} />}
+
+          {section === 'statements' && (
+            <section className="card module-card">
+              <div className="module-card__head">
+                <h2>
+                  <span className="step">3</span>
+                  {t('Holding Statement Builder', 'Pembina Kenyataan Awal')}
+                </h2>
+                <span className="module-card__badge">
+                  {statement ? t('Draft ready', 'Draf sedia') : t('No draft', 'Tiada draf')}
+                </span>
+              </div>
+              <p className="module-lead">
+                {t(
+                  `Templates auto-insert ${client.name}. Edit before release. Company Secretary should clear market-sensitive language. Bursa first if material.`,
+                  `Templat memasukkan ${client.name} secara automatik. Sunting sebelum keluaran. Setiausaha Syarikat harus meluluskan bahasa sensitif pasaran. Bursa dahulu jika material.`
+                )}
+              </p>
+              <div className="stmt-controls">
+                <div className="form-row">
+                  <label>{t('Scenario type', 'Jenis senario')}</label>
+                  <select value={scenario} onChange={(e) => setScenario(e.target.value)}>
+                    {SCENARIOS[lang].map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label>{t('Audience', 'Khalayak')}</label>
+                  <select value={audience} onChange={(e) => setAudience(e.target.value)}>
+                    <option value="media">{t('Media / public', 'Media / awam')}</option>
+                    <option value="internal">{t('Internal staff', 'Kakitangan dalaman')}</option>
+                    <option value="investors">
+                      {t('Investors / analysts', 'Pelabur / penganalisis')}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div className="btn-row">
+                <button type="button" className="btn btn-primary" onClick={generateStatement}>
+                  {t('Generate Statement', 'Jana Kenyataan')}
+                </button>
+                {statement && (
+                  <>
+                    <button type="button" className="btn btn-saffron" onClick={copyStatement}>
+                      {copied ? t('Copied', 'Disalin') : t('Copy', 'Salin')}
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={downloadStatement}>
+                      {t('Download .txt', 'Muat turun .txt')}
+                    </button>
+                  </>
+                )}
+              </div>
+              {statement && (
+                <div className="form-row" style={{ marginTop: '1rem' }}>
+                  <label>
+                    {t('Editable statement', 'Kenyataan boleh sunting')}
+                    <span className="char-count">
+                      {statement.length} {t('chars', 'aksara')}
+                    </span>
+                  </label>
+                  <textarea
+                    value={statement}
+                    onChange={(e) => setStatement(e.target.value)}
+                    rows={12}
+                  />
+                  <p className="stmt-hint">
+                    {t(
+                      'Do not release until cleared. Log the clearance decision below. Same facts in EN and BM.',
+                      'Jangan keluarkan sehingga diluluskan. Log keputusan kelulusan di bawah. Fakta sama dalam BM dan EN.'
+                    )}
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+          {section === 'log' && (
+            <section className="card module-card">
+              <div className="module-card__head">
+                <h2>
+                  <span className="step">4</span>
+                  {t('Decision Log', 'Log Keputusan')}
+                </h2>
+                <span className="module-card__badge">
+                  {log.length} {t('entries', 'entri')}
+                </span>
+              </div>
+              <p className="module-lead">
+                {t(
+                  'Every material decision should be timed and attributable. Export for after-action review.',
+                  'Setiap keputusan material harus berwaktu dan boleh dikesan. Eksport untuk semakan selepas tindakan.'
+                )}
+              </p>
+              <div className="log-compose">
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder={t('Add a manual decision note…', 'Tambah nota keputusan manual…')}
+                  value={manualLog}
+                  onChange={(e) => setManualLog(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') addManualLog()
+                  }}
+                />
+                <button type="button" className="btn btn-primary" onClick={addManualLog}>
+                  {t('Add', 'Tambah')}
+                </button>
+              </div>
+              {log.length === 0 ? (
+                <p className="empty-state">
+                  {t(
+                    'No decisions recorded yet. Actions above will appear here.',
+                    'Tiada keputusan direkodkan lagi. Tindakan di atas akan dipaparkan di sini.'
+                  )}
+                </p>
+              ) : (
+                <>
+                  <ul className="log-list log-list--rich">
+                    {log.map((entry) => (
+                      <li key={entry.id}>
+                        <div className="log-list__time">{entry.time}</div>
+                        <div className="log-list__body">{entry.text}</div>
                       </li>
                     ))}
                   </ul>
-                </section>
-              )}
-
-              {showStatements && (
-                <section className="card module-card">
-                  <div className="module-card__head">
-                    <h2><span className="step">3</span>{t('Holding Statement Builder', 'Pembina Kenyataan Awal')}</h2>
-                    <span className="module-card__badge">{statement ? t('Draft ready', 'Draf sedia') : t('No draft', 'Tiada draf')}</span>
-                  </div>
-                  <p className="module-lead">{t(`Templates auto-insert ${client.name}. Edit before release. Company Secretary should clear market-sensitive language.`, `Templat memasukkan ${client.name} secara automatik. Sunting sebelum keluaran. Setiausaha Syarikat harus meluluskan bahasa sensitif pasaran.`)}</p>
-                  <div className="stmt-controls">
-                    <div className="form-row">
-                      <label>{t('Scenario type', 'Jenis senario')}</label>
-                      <select value={scenario} onChange={(e) => setScenario(e.target.value)}>{SCENARIOS[lang].map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select>
-                    </div>
-                    <div className="form-row">
-                      <label>{t('Audience', 'Khalayak')}</label>
-                      <select value={audience} onChange={(e) => setAudience(e.target.value)}>
-                        <option value="media">{t('Media / public', 'Media / awam')}</option>
-                        <option value="internal">{t('Internal staff', 'Kakitangan dalaman')}</option>
-                        <option value="investors">{t('Investors / analysts', 'Pelabur / penganalisis')}</option>
-                      </select>
-                    </div>
-                  </div>
                   <div className="btn-row">
-                    <button type="button" className="btn btn-primary" onClick={generateStatement}>{t('Generate Statement', 'Jana Kenyataan')}</button>
-                    {statement && (<>
-                      <button type="button" className="btn btn-saffron" onClick={copyStatement}>{copied ? t('Copied', 'Disalin') : t('Copy', 'Salin')}</button>
-                      <button type="button" className="btn btn-secondary" onClick={downloadStatement}>{t('Download .txt', 'Muat turun .txt')}</button>
-                    </>)}
+                    <button type="button" className="btn btn-secondary" onClick={exportLog}>
+                      {t('Export log', 'Eksport log')}
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={clearLog}>
+                      {t('Clear Log', 'Kosongkan Log')}
+                    </button>
                   </div>
-                  {statement && (
-                    <div className="form-row" style={{ marginTop: '1rem' }}>
-                      <label>{t('Editable statement', 'Kenyataan boleh sunting')}<span className="char-count">{statement.length} {t('chars', 'aksara')}</span></label>
-                      <textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={12} />
-                      <p className="stmt-hint">{t('Do not release until cleared. Log the clearance decision below.', 'Jangan keluarkan sehingga diluluskan. Log keputusan kelulusan di bawah.')}</p>
-                    </div>
-                  )}
-                </section>
+                </>
               )}
-
-              {showLog && (
-                <section className="card module-card">
-                  <div className="module-card__head">
-                    <h2><span className="step">4</span>{t('Decision Log', 'Log Keputusan')}</h2>
-                    <span className="module-card__badge">{log.length} {t('entries', 'entri')}</span>
-                  </div>
-                  <p className="module-lead">{t('Every material decision should be timed and attributable. Export for after-action review.', 'Setiap keputusan material harus berwaktu dan boleh dikesan. Eksport untuk semakan selepas tindakan.')}</p>
-                  <div className="log-compose">
-                    <input type="text" className="form-input" placeholder={t('Add a manual decision note…', 'Tambah nota keputusan manual…')} value={manualLog} onChange={(e) => setManualLog(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addManualLog() }} />
-                    <button type="button" className="btn btn-primary" onClick={addManualLog}>{t('Add', 'Tambah')}</button>
-                  </div>
-                  {log.length === 0 ? (
-                    <p className="empty-state">{t('No decisions recorded yet. Actions above will appear here.', 'Tiada keputusan direkodkan lagi. Tindakan di atas akan dipaparkan di sini.')}</p>
-                  ) : (
-                    <>
-                      <ul className="log-list log-list--rich">{log.map((entry) => (<li key={entry.id}><div className="log-list__time">{entry.time}</div><div className="log-list__body">{entry.text}</div></li>))}</ul>
-                      <div className="btn-row">
-                        <button type="button" className="btn btn-secondary" onClick={exportLog}>{t('Export log', 'Eksport log')}</button>
-                        <button type="button" className="btn btn-secondary" onClick={clearLog}>{t('Clear Log', 'Kosongkan Log')}</button>
-                      </div>
-                    </>
-                  )}
-                </section>
-              )}
-            </>
+            </section>
           )}
         </div>
       </div>
