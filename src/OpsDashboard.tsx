@@ -87,6 +87,7 @@ export default function OpsDashboard({
   lang, t, client, severity, checked, statement, scenario, log,
   severityData, scenarios, onGoSeverity, onGoStatements,
 }: OpsDashboardProps) {
+  const total = Math.max(checked.length, 1)
   const done = checked.filter(Boolean).length
   const seed = useMemo(() => seedFromClient(client.id), [client.id])
 
@@ -208,9 +209,9 @@ export default function OpsDashboard({
 
         <div className="ops-kpi">
           <div className="ops-kpi__label">{t('First 60 min', '60 min pertama')}</div>
-          <div className="ops-kpi__value">{done}<span className="ops-kpi__denom">/9</span></div>
-          <div className="ops-kpi__bar"><div className="ops-kpi__bar-fill" style={{ width: `${(done / 9) * 100}%` }} /></div>
-          <div className="ops-kpi__meta">{done === 9 ? t('Checklist complete', 'Senarai lengkap') : t('In progress', 'Dalam proses')}</div>
+          <div className="ops-kpi__value">{done}<span className="ops-kpi__denom">/{total}</span></div>
+          <div className="ops-kpi__bar"><div className="ops-kpi__bar-fill" style={{ width: `${(done / total) * 100}%` }} /></div>
+          <div className="ops-kpi__meta">{done === total ? t('Checklist complete', 'Senarai lengkap') : t('In progress', 'Dalam proses')}</div>
         </div>
 
         <div className="ops-kpi ops-kpi--live">
