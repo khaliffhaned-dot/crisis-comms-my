@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import Landing from './Landing'
 import Manual from './Manual'
 import './index.css'
@@ -6,12 +6,26 @@ import './index.css'
 type Lang = 'bm' | 'en'
 type Mode = 'landing' | 'playbook' | 'manual'
 type Severity = 1 | 2 | 3 | 4 | null
+type ShellSection = 'playbook' | 'manual' | 'severity' | 'checklist' | 'statements' | 'log'
 
 interface LogEntry {
   id: number
   time: string
   text: string
 }
+
+interface Client {
+  id: string
+  name: string
+  short: string
+  market: string
+}
+
+const CLIENTS: Client[] = [
+  { id: 'demo-main', name: 'Demo Holdings Bhd', short: 'DH', market: 'Main Market' },
+  { id: 'ace-tech', name: 'ACE Tech Solutions', short: 'AT', market: 'ACE Market' },
+  { id: 'sabah-infra', name: 'Sabah Infra Group', short: 'SI', market: 'Main Market' },
+]
 
 const SEVERITY_DATA = {
   1: {
@@ -114,6 +128,11 @@ const STATEMENTS: Record<string, { en: string; bm: string }> = {
 function App() {
   const [lang, setLang] = useState<Lang>('bm')
   const [mode, setMode] = useState<Mode>('landing')
+  const [section, setSection] = useState<ShellSection>('playbook')
+  const [clientId, setClientId] = useState(CLIENTS[0].id)
+  const [clientOpen, setClientOpen] = useState(false)
+  const clientRef = useRef<HTMLDivElement>(null)
+
   const [severity, setSeverity] = useState<Severity>(null)
   const [checked, setChecked] = useState<boolean[]>(Array(9).fill(false))
   const [scenario, setScenario] = useState('operational')
@@ -121,17 +140,31 @@ function App() {
   const [log, setLog] = useState<LogEntry[]>([])
   const [copied, setCopied] = useState(false)
 
+  const client = CLIENTS.find((c) => c.id === clientId) || CLIENTS[0]
+
   const t = useCallback(
     (en: string, bm: string) => (lang === 'bm' ? bm : en),
     [lang]
   )
 
-  const toggleLang = () => setLang((prev) => (prev === 'bm' ? 'en' : 'bm'))
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (clientRef.current && !clientRef.current.contains(e.target as Node)) {
+        setClientOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
 
   const addLog = (text: string) => {
     const entry: LogEntry = {
       id: Date.now(),
-      time: new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      time: new Date().toLocaleTimeString('en-MY', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
       text,
     }
     setLog((prev) => [entry, ...prev])
@@ -152,7 +185,10 @@ function App() {
   }
 
   const generateStatement = () => {
-    const text = STATEMENTS[scenario]?.[lang] || ''
+    let text = STATEMENTS[scenario]?.[lang] || ''
+    text = text
+      .replace(/\[Company Name\]/g, client.name)
+      .replace(/\[Nama Syarikat\]/g, client.name)
     setStatement(text)
     addLog(
       t(
@@ -176,201 +212,309 @@ function App() {
 
   const clearLog = () => setLog([])
 
+  const goShell = (s: ShellSection) => {
+    setSection(s)
+    setMode(s === 'manual' ? 'manual' : 'playbook')
+  }
+
+  const pageTitle =
+    section === 'manual'
+      ? t('Manual', 'Manual')
+      : section === 'severity'
+        ? t('Severity', 'Keterukan')
+        : section === 'checklist'
+          ? t('First Sixty Minutes', 'Enam Puluh Minit Pertama')
+          : section === 'statements'
+            ? t('Holding Statements', 'Kenyataan Awal')
+            : section === 'log'
+              ? t('Decision Log', 'Log Keputusan')
+              : t('Operational Playbook', 'Playbook Operasi')
+
   if (mode === 'landing') {
     return (
       <Landing
         lang={lang}
-        onEnterPlaybook={() => setMode('playbook')}
-        onEnterManual={() => setMode('manual')}
-        onToggleLang={toggleLang}
+        onEnterPlaybook={() => {
+          setSection('playbook')
+          setMode('playbook')
+        }}
+        onEnterManual={() => {
+          setSection('manual')
+          setMode('manual')
+        }}
+        onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
       />
     )
   }
 
+  const showFullPlaybook = section === 'playbook'
+  const showSeverity = showFullPlaybook || section === 'severity'
+  const showChecklist = showFullPlaybook || section === 'checklist'
+  const showStatements = showFullPlaybook || section === 'statements'
+  const showLog = showFullPlaybook || section === 'log'
+
   return (
-    <>
-      <header className="app-header">
-        <div>
-          <h1 style={{ cursor: 'pointer' }} onClick={() => setMode('landing')}>
-            Escalate MY
-          </h1>
-          <div className="subtitle">
-            {t('Crisis Communications Playbook', 'Buku Panduan Komunikasi Krisis')}
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar__header">
+          <div className="sidebar__logo-wrapper">
+            <span className="sidebar__title" onClick={() => setMode('landing')}>
+              Escalate <span className="sidebar__title-v">MY</span>
+            </span>
+          </div>
+          <div className="sidebar__tagline">
+            {t('Crisis communications', 'Komunikasi krisis')}
           </div>
         </div>
 
-        <div className="header-actions">
-          <nav className="mode-nav">
+        <nav className="sidebar__nav">
+          <div className="nav-pillar">
             <button
-              className={mode === 'playbook' ? 'active' : ''}
-              onClick={() => setMode('playbook')}
+              type="button"
+              className={`nav-item ${section === 'playbook' || ['severity', 'checklist', 'statements', 'log'].includes(section) ? 'active-parent' : ''}`}
+              onClick={() => goShell('playbook')}
             >
-              {t('Playbook', 'Playbook')}
+              <span className="nav-item__content">
+                <span className="nav-item__icon">⚡</span>
+                <span className="nav-item__text">{t('Playbook', 'Playbook')}</span>
+              </span>
             </button>
-            <button
-              className={mode === 'manual' ? 'active' : ''}
-              onClick={() => setMode('manual')}
-            >
-              {t('Manual', 'Manual')}
-            </button>
-          </nav>
-
-          <div className="lang-toggle">
-            <button className={lang === 'bm' ? 'active' : ''} onClick={() => setLang('bm')}>
-              BM
-            </button>
-            <button className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>
-              EN
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main>
-        {mode === 'playbook' ? (
-          <>
-            <div className="dashboard-banner">
-              <div>
-                <h2>{t('Operational Playbook', 'Playbook Operasi')}</h2>
-                <p>{t('Assess severity, complete the first-hour checklist, draft holding language, and log decisions.', 'Nilai keterukan, lengkapkan senarai semak sejam pertama, gubal bahasa kenyataan, dan log keputusan.')}</p>
-              </div>
-              <div className="dashboard-stats">
-                <div className="dashboard-stat">
-                  <span className="val">{severity ? `L${severity}` : '—'}</span>
-                  <span className="lbl">{t('Severity', 'Keterukan')}</span>
-                </div>
-                <div className="dashboard-stat">
-                  <span className="val">{checked.filter(Boolean).length}/9</span>
-                  <span className="lbl">{t('Checklist', 'Senarai')}</span>
-                </div>
-                <div className="dashboard-stat">
-                  <span className="val">{log.length}</span>
-                  <span className="lbl">{t('Log entries', 'Entri log')}</span>
-                </div>
-              </div>
+            <div className="sub-nav-list">
+              <button type="button" className={`sub-nav-item ${section === 'severity' ? 'active' : ''}`} onClick={() => goShell('severity')}>
+                {t('Severity', 'Keterukan')}
+              </button>
+              <button type="button" className={`sub-nav-item ${section === 'checklist' ? 'active' : ''}`} onClick={() => goShell('checklist')}>
+                {t('First 60 min', '60 min pertama')}
+              </button>
+              <button type="button" className={`sub-nav-item ${section === 'statements' ? 'active' : ''}`} onClick={() => goShell('statements')}>
+                {t('Statements', 'Kenyataan')}
+              </button>
+              <button type="button" className={`sub-nav-item ${section === 'log' ? 'active' : ''}`} onClick={() => goShell('log')}>
+                {t('Decision log', 'Log keputusan')}
+              </button>
             </div>
-            <section className="card">
-              <h2>
-                <span className="step">1</span>
-                {t('Assess Severity', 'Nilai Tahap Keterukan')}
-              </h2>
-              <div className="severity-grid">
-                {([1, 2, 3, 4] as const).map((level) => (
-                  <button
-                    key={level}
-                    className={`severity-btn level-${level} ${severity === level ? 'selected' : ''}`}
-                    onClick={() => handleSeverity(level)}
-                  >
-                    <span className="level">{t(`Level ${level}`, `Tahap ${level}`)}</span>
-                    <span className="bm">
-                      {lang === 'bm'
-                        ? SEVERITY_DATA[level].bm.replace(`Tahap ${level} – `, '')
-                        : SEVERITY_DATA[level].en.replace(`Level ${level} – `, '')}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {severity && (
-                <div className="severity-action">
-                  <strong>{t('Recommended action:', 'Tindakan disyorkan:')}</strong>{' '}
-                  {lang === 'bm' ? SEVERITY_DATA[severity].actionBm : SEVERITY_DATA[severity].actionEn}
+          </div>
+
+          <div className="nav-pillar">
+            <button
+              type="button"
+              className={`nav-item ${section === 'manual' ? 'active-parent' : ''}`}
+              onClick={() => goShell('manual')}
+            >
+              <span className="nav-item__content">
+                <span className="nav-item__icon">📘</span>
+                <span className="nav-item__text">{t('Manual', 'Manual')}</span>
+              </span>
+            </button>
+          </div>
+        </nav>
+
+        <div className="sidebar__footer">
+          Escalate MY · v0.2
+          <br />
+          {client.market}
+        </div>
+      </aside>
+
+      <div className="main-wrapper">
+        <header className="shell-header">
+          <h2>{pageTitle}</h2>
+          <div className="shell-header__actions">
+            <div className="client-switcher" ref={clientRef}>
+              <button type="button" className="client-switcher__display" onClick={() => setClientOpen((o) => !o)}>
+                <span className="client-switcher__logo">{client.short}</span>
+                <span className="client-switcher__info">
+                  <span className="client-switcher__name">{client.name}</span>
+                  <span className="client-switcher__label">{t('Active client', 'Klien aktif')}</span>
+                </span>
+                <span className="client-switcher__arrow">{clientOpen ? '▴' : '▾'}</span>
+              </button>
+              {clientOpen && (
+                <div className="client-switcher__menu">
+                  {CLIENTS.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`client-switcher__option ${c.id === clientId ? 'active' : ''}`}
+                      onClick={() => {
+                        setClientId(c.id)
+                        setClientOpen(false)
+                        addLog(t(`Switched client to ${c.name}`, `Tukar klien kepada ${c.name}`))
+                      }}
+                    >
+                      <span className="client-switcher__logo">{c.short}</span>
+                      <span>
+                        <span className="client-switcher__option-name">{c.name}</span>
+                        <br />
+                        <span className="client-switcher__option-meta">{c.market}</span>
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
-            </section>
+            </div>
 
-            <section className="card">
-              <h2>
-                <span className="step">2</span>
-                {t('First Sixty Minutes Checklist', 'Senarai Semak Enam Puluh Minit Pertama')}
-              </h2>
-              <ul className="checklist">
-                {CHECKLIST_ITEMS[lang].map((item, idx) => (
-                  <li key={idx}>
-                    <input type="checkbox" checked={checked[idx]} onChange={() => toggleCheck(idx)} />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <div className="lang-toggle">
+              <button type="button" className={lang === 'bm' ? 'active' : ''} onClick={() => setLang('bm')}>BM</button>
+              <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
+            </div>
+          </div>
+        </header>
 
-            <section className="card">
-              <h2>
-                <span className="step">3</span>
-                {t('Holding Statement Builder', 'Pembina Kenyataan Awal')}
-              </h2>
-              <div className="form-row">
-                <label>{t('Scenario type', 'Jenis senario')}</label>
-                <select value={scenario} onChange={(e) => setScenario(e.target.value)}>
-                  {SCENARIOS[lang].map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="btn-row">
-                <button className="btn btn-primary" onClick={generateStatement}>
-                  {t('Generate Statement', 'Jana Kenyataan')}
-                </button>
-              </div>
-              {statement && (
-                <>
-                  <div className="form-row" style={{ marginTop: '1rem' }}>
-                    <label>{t('Editable statement', 'Kenyataan boleh sunting')}</label>
-                    <textarea value={statement} onChange={(e) => setStatement(e.target.value)} />
+        <div className="shell-main">
+          {section === 'manual' ? (
+            <Manual lang={lang} onBackToPlaybook={() => goShell('playbook')} />
+          ) : (
+            <>
+              {showFullPlaybook && (
+                <div className="dashboard-banner">
+                  <div>
+                    <h2>{t('Operational Playbook', 'Playbook Operasi')}</h2>
+                    <p>
+                      {t(
+                        `Working context: ${client.name}. Assess severity, complete the first-hour checklist, draft holding language, and log decisions.`,
+                        `Konteks kerja: ${client.name}. Nilai keterukan, lengkapkan senarai semak sejam pertama, gubal bahasa kenyataan, dan log keputusan.`
+                      )}
+                    </p>
                   </div>
-                  <div className="btn-row">
-                    <button className="btn btn-saffron" onClick={copyStatement}>
-                      {copied ? t('Copied', 'Disalin') : t('Copy to Clipboard', 'Salin ke Papan Keratan')}
-                    </button>
+                  <div className="dashboard-stats">
+                    <div className="dashboard-stat">
+                      <span className="val">{severity ? `L${severity}` : '—'}</span>
+                      <span className="lbl">{t('Severity', 'Keterukan')}</span>
+                    </div>
+                    <div className="dashboard-stat">
+                      <span className="val">{checked.filter(Boolean).length}/9</span>
+                      <span className="lbl">{t('Checklist', 'Senarai')}</span>
+                    </div>
+                    <div className="dashboard-stat">
+                      <span className="val">{log.length}</span>
+                      <span className="lbl">{t('Log entries', 'Entri log')}</span>
+                    </div>
                   </div>
-                </>
+                </div>
               )}
-            </section>
 
-            <section className="card">
-              <h2>
-                <span className="step">4</span>
-                {t('Decision Log', 'Log Keputusan')}
-              </h2>
-              {log.length === 0 ? (
-                <p className="empty-state">
-                  {t(
-                    'No decisions recorded yet. Actions above will appear here.',
-                    'Tiada keputusan direkodkan lagi. Tindakan di atas akan dipaparkan di sini.'
+              {showSeverity && (
+                <section className="card">
+                  <h2>
+                    <span className="step">1</span>
+                    {t('Assess Severity', 'Nilai Tahap Keterukan')}
+                  </h2>
+                  <div className="severity-grid">
+                    {([1, 2, 3, 4] as const).map((level) => (
+                      <button
+                        key={level}
+                        type="button"
+                        className={`severity-btn level-${level} ${severity === level ? 'selected' : ''}`}
+                        onClick={() => handleSeverity(level)}
+                      >
+                        <span className="level">{t(`Level ${level}`, `Tahap ${level}`)}</span>
+                        <span className="bm">
+                          {lang === 'bm'
+                            ? SEVERITY_DATA[level].bm.replace(`Tahap ${level} – `, '')
+                            : SEVERITY_DATA[level].en.replace(`Level ${level} – `, '')}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {severity && (
+                    <div className="severity-action">
+                      <strong>{t('Recommended action:', 'Tindakan disyorkan:')}</strong>{' '}
+                      {lang === 'bm' ? SEVERITY_DATA[severity].actionBm : SEVERITY_DATA[severity].actionEn}
+                    </div>
                   )}
-                </p>
-              ) : (
-                <>
-                  <ul className="log-list">
-                    {log.map((entry) => (
-                      <li key={entry.id}>
-                        <div className="time">{entry.time}</div>
-                        <div>{entry.text}</div>
+                </section>
+              )}
+
+              {showChecklist && (
+                <section className="card">
+                  <h2>
+                    <span className="step">2</span>
+                    {t('First Sixty Minutes Checklist', 'Senarai Semak Enam Puluh Minit Pertama')}
+                  </h2>
+                  <ul className="checklist">
+                    {CHECKLIST_ITEMS[lang].map((item, idx) => (
+                      <li key={idx}>
+                        <input type="checkbox" checked={checked[idx]} onChange={() => toggleCheck(idx)} />
+                        <span>{item}</span>
                       </li>
                     ))}
                   </ul>
+                </section>
+              )}
+
+              {showStatements && (
+                <section className="card">
+                  <h2>
+                    <span className="step">3</span>
+                    {t('Holding Statement Builder', 'Pembina Kenyataan Awal')}
+                  </h2>
+                  <div className="form-row">
+                    <label>{t('Scenario type', 'Jenis senario')}</label>
+                    <select value={scenario} onChange={(e) => setScenario(e.target.value)}>
+                      {SCENARIOS[lang].map((s) => (
+                        <option key={s.id} value={s.id}>{s.label}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="btn-row">
-                    <button className="btn btn-secondary" onClick={clearLog}>
-                      {t('Clear Log', 'Kosongkan Log')}
+                    <button type="button" className="btn btn-primary" onClick={generateStatement}>
+                      {t('Generate Statement', 'Jana Kenyataan')}
                     </button>
                   </div>
-                </>
+                  {statement && (
+                    <>
+                      <div className="form-row" style={{ marginTop: '1rem' }}>
+                        <label>{t('Editable statement', 'Kenyataan boleh sunting')}</label>
+                        <textarea value={statement} onChange={(e) => setStatement(e.target.value)} />
+                      </div>
+                      <div className="btn-row">
+                        <button type="button" className="btn btn-saffron" onClick={copyStatement}>
+                          {copied ? t('Copied', 'Disalin') : t('Copy to Clipboard', 'Salin ke Papan Keratan')}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </section>
               )}
-            </section>
-          </>
-        ) : (
-          <Manual lang={lang} onBackToPlaybook={() => setMode('playbook')} />
-        )}
-      </main>
 
-      <footer className="app-footer">
-        Escalate MY · {t('Comprehensive Malaysia Edition', 'Edisi Komprehensif Malaysia')} · v0.2
-        <br />
-        {t(
-          'This tool does not constitute legal advice. Verify all regulatory obligations with counsel.',
-          'Alat ini tidak merupakan nasihat undang-undang. Sahkan semua kewajipan peraturan dengan penasihat.'
-        )}
-      </footer>
-    </>
+              {showLog && (
+                <section className="card">
+                  <h2>
+                    <span className="step">4</span>
+                    {t('Decision Log', 'Log Keputusan')}
+                  </h2>
+                  {log.length === 0 ? (
+                    <p className="empty-state">
+                      {t(
+                        'No decisions recorded yet. Actions above will appear here.',
+                        'Tiada keputusan direkodkan lagi. Tindakan di atas akan dipaparkan di sini.'
+                      )}
+                    </p>
+                  ) : (
+                    <>
+                      <ul className="log-list">
+                        {log.map((entry) => (
+                          <li key={entry.id}>
+                            <div className="time">{entry.time}</div>
+                            <div>{entry.text}</div>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="btn-row">
+                        <button type="button" className="btn btn-secondary" onClick={clearLog}>
+                          {t('Clear Log', 'Kosongkan Log')}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
