@@ -1,0 +1,17 @@
+name = "escalate-my-war-room"
+main = "worker/src/index.ts"
+compatibility_date = "2026-10-01"
+
+[durable_objects]
+bindings = [
+  { name = "INCIDENT_ROOM", class_name = "IncidentRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["IncidentRoom"]
+
+# Optional: serve SPA assets from same Worker later
+# [assets]
+# directory = "./dist"
+# not_found_handling = "single-page-application"
