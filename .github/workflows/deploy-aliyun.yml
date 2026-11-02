@@ -1,0 +1,118 @@
+# Deploy CrisisComms MY to Alibaba Cloud OSS (+ optional CDN refresh)
+# Required GitHub Secrets:
+#   ALIYUN_ACCESS_KEY_ID
+#   ALIYUN_ACCESS_KEY_SECRET
+#   ALIYUN_OSS_BUCKET          e.g. crisis-comms-my
+#   ALIYUN_OSS_ENDPOINT        e.g. oss-ap-southeast-1.aliyuncs.com
+# Optional:
+#   ALIYUN_CDN_DOMAIN          e.g. app.example.com (triggers cache refresh)
+#   ALIYUN_OSS_REGION          e.g. ap-southeast-1 (for CDN API if used)
+
+name: Deploy to Alibaba Cloud OSS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-aliyun
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Verify dist output
+        run: |
+          test -f dist/index.html
+          ls -la dist/
+          echo "Build OK"
+
+      - name: Install ossutil
+        run: |
+          curl -sL https://gosspublic.alicdn.com/ossutil/1.7.19/ossutil64 -o ossutil
+          chmod +x ossutil
+          sudo mv ossutil /usr/local/bin/ossutil
+          ossutil --version
+
+      - name: Configure ossutil
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+          ALIYUN_OSS_ENDPOINT: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
+        run: |
+          cat > /tmp/.ossutilconfig << EOF
+          [Credentials]
+          language=EN
+          accessKeyID=${ALIYUN_ACCESS_KEY_ID}
+          accessKeySecret=${ALIYUN_ACCESS_KEY_SECRET}
+          endpoint=${ALIYUN_OSS_ENDPOINT}
+          EOF
+          sed -i 's/^[[:space:]]*//' /tmp/.ossutilconfig
+
+      - name: Sync dist to OSS
+        env:
+          ALIYUN_OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+        run: |
+          ossutil -c /tmp/.ossutilconfig sync dist/ "oss://${ALIYUN_OSS_BUCKET}/" \
+            --delete \
+            --force \
+            --jobs 8 \
+            --update
+          echo "Upload complete"
+
+      - name: Set Cache-Control for hashed assets
+        env:
+          ALIYUN_OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+        run: |
+          ossutil -c /tmp/.ossutilconfig set-meta "oss://${ALIYUN_OSS_BUCKET}/" \
+            Cache-Control:public,max-age=31536000,immutable \
+            -r -f \
+            --include "*.js" --include "*.css" --include "*.woff2" --include "*.woff" || true
+
+      - name: Set no-cache for index.html
+        env:
+          ALIYUN_OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+        run: |
+          ossutil -c /tmp/.ossutilconfig set-meta "oss://${ALIYUN_OSS_BUCKET}/index.html" \
+            Cache-Control:no-cache,no-store,must-revalidate \
+            -f || true
+
+      - name: Refresh CDN cache (optional)
+        if: ${{ secrets.ALIYUN_CDN_DOMAIN != '' }}
+        env:
+          ALIYUN_CDN_DOMAIN: ${{ secrets.ALIYUN_CDN_DOMAIN }}
+        run: |
+          echo "CDN domain configured: ${ALIYUN_CDN_DOMAIN}"
+          echo "After deploy, refresh CDN cache for / and /index.html in the CDN console if needed."
+
+      - name: Deployment summary
+        env:
+          ALIYUN_OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+          ALIYUN_OSS_ENDPOINT: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
+        run: |
+          echo "========================================"
+          echo " CrisisComms MY deployed to Alibaba OSS"
+          echo " Bucket:   ${ALIYUN_OSS_BUCKET}"
+          echo " Endpoint: ${ALIYUN_OSS_ENDPOINT}"
+          echo "========================================"
