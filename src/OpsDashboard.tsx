@@ -1,3 +1,5 @@
+import './ops-dashboard.css'
+
 type Lang = 'bm' | 'en'
 
 type SeverityData = Record<
