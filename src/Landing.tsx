@@ -12,125 +12,167 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
 
   return (
     <div className="landing">
-      {/* Top bar */}
       <header className="landing-header">
         <div className="landing-brand">
           <span className="brand-mark">◆</span>
-          <span className="brand-name">CrisisComms MY</span>
+          <div>
+            <span className="brand-name">Escalate MY</span>
+            <span className="brand-tag">{t('Enterprise Edition', 'Edisi Enterprise')}</span>
+          </div>
         </div>
-        <div className="lang-toggle">
-          <button className={lang === 'bm' ? 'active' : ''} onClick={onToggleLang}>
-            BM
-          </button>
-          <button className={lang === 'en' ? 'active' : ''} onClick={onToggleLang}>
-            EN
-          </button>
+        <div className="header-right">
+          <nav className="landing-nav">
+            <button type="button" onClick={onEnterPlaybook}>{t('Playbook', 'Playbook')}</button>
+            <button type="button" onClick={onEnterManual}>{t('Manual', 'Manual')}</button>
+          </nav>
+          <div className="lang-toggle">
+            <button className={lang === 'bm' ? 'active' : ''} onClick={onToggleLang}>BM</button>
+            <button className={lang === 'en' ? 'active' : ''} onClick={onToggleLang}>EN</button>
+          </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="hero">
+      <section className="hero hero-enterprise">
         <div className="hero-content">
-          <p className="hero-eyebrow">
-            {t('Comprehensive Malaysia Edition', 'Edisi Komprehensif Malaysia')}
-          </p>
+          <p className="hero-eyebrow">{t('For Main Market & ACE Market Issuers', 'Untuk Penerbit Pasaran Utama & ACE')}</p>
           <h1>
-            {t('Crisis Communications', 'Komunikasi Krisis')}
+            {t('Crisis communications,', 'Komunikasi krisis,')}
             <br />
-            <span className="highlight">{t('Playbook', 'Playbook')}</span>
+            <span className="highlight">{t('under control in the first hour.', 'terkawal dalam sejam pertama.')}</span>
           </h1>
           <p className="hero-sub">
             {t(
-              'Built for Bursa-listed companies. Rapid bilingual response, First Sixty Minutes guidance, and clear actionable protocols to protect reputation and stakeholder trust.',
-              'Dibina untuk syarikat tersenarai Bursa. Respons dwibahasa yang pantas, panduan Enam Puluh Minit Pertama, dan protokol jelas untuk melindungi reputasi serta kepercayaan pihak berkepentingan.'
+              'An operational playbook and reference manual built for Malaysian listed companies. Severity assessment, bilingual holding statements, decision logging, and Bursa-aware guidance — in one focused tool.',
+              'Playbook operasi dan manual rujukan dibina untuk syarikat tersenarai Malaysia. Penilaian keterukan, kenyataan awal dwibahasa, log keputusan, dan panduan sedar Bursa — dalam satu alat berfokus.'
             )}
           </p>
-
-          <ul className="hero-features">
-            <li>
-              <span className="feat-icon">⚡</span>
-              {t('Rapid response for the critical first hour', 'Respons pantas untuk sejam kritikal pertama')}
-            </li>
-            <li>
-              <span className="feat-icon">💬</span>
-              {t('Fully bilingual – Bahasa Malaysia + English', 'Sepenuhnya dwibahasa – Bahasa Malaysia + English')}
-            </li>
-            <li>
-              <span className="feat-icon">📋</span>
-              {t('Severity assessment, checklists & holding statements', 'Penilaian keterukan, senarai semak & kenyataan awal')}
-            </li>
-          </ul>
-
           <div className="hero-cta">
             <button className="btn btn-saffron btn-lg" onClick={onEnterPlaybook}>
-              {t('Open Playbook', 'Buka Playbook')} →
+              {t('Open Playbook', 'Buka Playbook')}
             </button>
             <button className="btn btn-secondary btn-lg" onClick={onEnterManual}>
               {t('View Manual', 'Lihat Manual')}
             </button>
           </div>
+          <p className="hero-note">
+            {t('No account required for this demo build. Content is for operational readiness, not legal advice.', 'Tiada akaun diperlukan untuk binaan demo ini. Kandungan untuk kesediaan operasi, bukan nasihat undang-undang.')}
+          </p>
         </div>
-
         <div className="hero-visual">
-          <div className="mock-window">
-            <div className="mock-titlebar">
-              <span className="dot red"></span>
-              <span className="dot yellow"></span>
-              <span className="dot green"></span>
-              <span className="mock-title">CrisisComms MY</span>
+          <div className="dash-preview">
+            <div className="dash-preview-header">
+              <span className="dash-preview-title">Escalate MY</span>
+              <span className="dash-preview-badge">{t('Live mode', 'Mod langsung')}</span>
             </div>
-            <div className="mock-body">
-              <div className="mock-sidebar">
-                <div className="mock-nav active">{t('Playbook', 'Playbook')}</div>
-                <div className="mock-nav">{t('Severity', 'Keterukan')}</div>
-                <div className="mock-nav">{t('Statements', 'Kenyataan')}</div>
-                <div className="mock-nav">{t('Log', 'Log')}</div>
+            <div className="dash-preview-grid">
+              <div className="dash-preview-card">
+                <span className="dpc-label">{t('Severity', 'Keterukan')}</span>
+                <span className="dpc-value">L2–L4</span>
               </div>
-              <div className="mock-main">
-                <div className="mock-label">{t('Severity Levels', 'Tahap Keterukan')}</div>
-                <div className="mock-levels">
-                  <div className="mock-level l1">1</div>
-                  <div className="mock-level l2">2</div>
-                  <div className="mock-level l3">3</div>
-                  <div className="mock-level l4">4</div>
-                </div>
-                <div className="mock-label" style={{ marginTop: '0.75rem' }}>
-                  {t('Holding Statement', 'Kenyataan Awal')}
-                </div>
-                <div className="mock-statement">
-                  {lang === 'bm'
-                    ? '[Nama Syarikat] sedang menyiasat laporan mengenai...'
-                    : '[Company Name] is investigating reports concerning...'}
-                </div>
+              <div className="dash-preview-card">
+                <span className="dpc-label">{t('Languages', 'Bahasa')}</span>
+                <span className="dpc-value">BM · EN</span>
               </div>
+              <div className="dash-preview-card">
+                <span className="dpc-label">{t('Scenarios', 'Senario')}</span>
+                <span className="dpc-value">6</span>
+              </div>
+              <div className="dash-preview-card">
+                <span className="dpc-label">{t('First hour', 'Sejam pertama')}</span>
+                <span className="dpc-value">60 min</span>
+              </div>
+            </div>
+            <div className="dash-preview-row">
+              <div className="severity-pills">
+                <span className="pill l1">1</span>
+                <span className="pill l2">2</span>
+                <span className="pill l3">3</span>
+                <span className="pill l4">4</span>
+              </div>
+              <span className="dash-preview-caption">{t('Severity matrix ready', 'Matriks keterukan sedia')}</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Trust bar */}
-      <section className="trust-bar">
-        <div className="trust-item">
-          <strong>{t('For Main & ACE Market', 'Untuk Pasaran Utama & ACE')}</strong>
-          <span>{t('Bursa Malaysia listed companies', 'Syarikat tersenarai Bursa Malaysia')}</span>
+      <section className="enterprise-strip">
+        <div className="strip-inner">
+          <div className="strip-item">
+            <strong>{t('Bursa-oriented', 'Berorientasikan Bursa')}</strong>
+            <span>{t('Disclosure-aware sequencing and language', 'Penjujukan dan bahasa sedar pendedahan')}</span>
+          </div>
+          <div className="strip-item">
+            <strong>{t('Equal-weight BM', 'BM setara')}</strong>
+            <span>{t('Bahasa Malaysia as a primary working language', 'Bahasa Malaysia sebagai bahasa kerja utama')}</span>
+          </div>
+          <div className="strip-item">
+            <strong>{t('Operational focus', 'Fokus operasi')}</strong>
+            <span>{t('Built for live response, not slide decks', 'Dibina untuk respons langsung, bukan slaid')}</span>
+          </div>
         </div>
-        <div className="trust-item">
-          <strong>{t('BM + English', 'BM + English')}</strong>
-          <span>{t('Equal weight bilingual support', 'Sokongan dwibahasa setara')}</span>
+      </section>
+
+      <section className="features-section">
+        <h2 className="section-title">{t('What you get', 'Apa yang anda peroleh')}</h2>
+        <div className="features-grid">
+          <article className="feature-card">
+            <h3>{t('Playbook Mode', 'Mod Playbook')}</h3>
+            <p>{t('Severity assessment, First Sixty Minutes checklist, holding statement builder, and timestamped decision log — designed for use under time pressure.', 'Penilaian keterukan, senarai semak Enam Puluh Minit Pertama, pembina kenyataan awal, dan log keputusan berwaktu — direka untuk digunakan di bawah tekanan masa.')}</p>
+          </article>
+          <article className="feature-card">
+            <h3>{t('Manual Mode', 'Mod Manual')}</h3>
+            <p>{t('Reference guidance: principles, roles, stakeholder priorities, media protocols, BM guidance, East Malaysia considerations, post-crisis review, and glossary.', 'Panduan rujukan: prinsip, peranan, keutamaan pihak berkepentingan, protokol media, panduan BM, pertimbangan Malaysia Timur, semakan pasca-krisis, dan glosari.')}</p>
+          </article>
+          <article className="feature-card">
+            <h3>{t('Six scenario templates', 'Enam templat senario')}</h3>
+            <p>{t('Operational/safety, market-sensitive, community/land, internal, cyber/data, and governance — each with bilingual holding language ready to adapt.', 'Operasi/keselamatan, sensitif pasaran, komuniti/tanah, dalaman, siber/data, dan tadbir urus — setiap satu dengan bahasa kenyataan awal dwibahasa sedia diadaptasi.')}</p>
+          </article>
         </div>
-        <div className="trust-item">
-          <strong>{t('Operational Focus', 'Fokus Operasi')}</strong>
-          <span>{t('Built for live crisis response', 'Dibina untuk respons krisis langsung')}</span>
+      </section>
+
+      <section className="how-section">
+        <h2 className="section-title">{t('How teams use it', 'Bagaimana pasukan menggunakannya')}</h2>
+        <ol className="how-steps">
+          <li>
+            <span className="step-num">1</span>
+            <div>
+              <strong>{t('Assess', 'Nilai')}</strong>
+              <p>{t('Select severity level. Recommended actions appear immediately.', 'Pilih tahap keterukan. Tindakan disyorkan dipaparkan serta-merta.')}</p>
+            </div>
+          </li>
+          <li>
+            <span className="step-num">2</span>
+            <div>
+              <strong>{t('Check', 'Semak')}</strong>
+              <p>{t('Work through the First Sixty Minutes checklist and log decisions.', 'Kerjakan senarai semak Enam Puluh Minit Pertama dan log keputusan.')}</p>
+            </div>
+          </li>
+          <li>
+            <span className="step-num">3</span>
+            <div>
+              <strong>{t('Draft', 'Gubal')}</strong>
+              <p>{t('Generate a bilingual holding statement, edit, and copy for clearance.', 'Jana kenyataan awal dwibahasa, sunting, dan salin untuk kelulusan.')}</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section className="cta-band">
+        <div className="cta-band-inner">
+          <h2>{t('Ready when the first hour matters.', 'Sedia apabila sejam pertama penting.')}</h2>
+          <p>{t('Open the Playbook for live response, or the Manual for preparation and training.', 'Buka Playbook untuk respons langsung, atau Manual untuk persediaan dan latihan.')}</p>
+          <div className="hero-cta">
+            <button className="btn btn-saffron btn-lg" onClick={onEnterPlaybook}>{t('Open Playbook', 'Buka Playbook')}</button>
+            <button className="btn btn-secondary btn-lg" onClick={onEnterManual}>{t('View Manual', 'Lihat Manual')}</button>
+          </div>
         </div>
       </section>
 
       <footer className="landing-footer">
-        CrisisComms MY · {t('Comprehensive Malaysia Edition', 'Edisi Komprehensif Malaysia')} · v0.1
-        <br />
-        {t(
-          'This tool does not constitute legal advice.',
-          'Alat ini tidak merupakan nasihat undang-undang.'
-        )}
+        <div className="footer-inner">
+          <span>Escalate MY · {t('Comprehensive Malaysia Edition', 'Edisi Komprehensif Malaysia')} · v0.2</span>
+          <span>{t('This tool does not constitute legal advice. Verify all regulatory obligations with counsel.', 'Alat ini tidak merupakan nasihat undang-undang. Sahkan semua kewajipan peraturan dengan penasihat.')}</span>
+        </div>
       </footer>
     </div>
   )
