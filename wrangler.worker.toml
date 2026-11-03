@@ -22,9 +22,6 @@ enabled = true
 head_sampling_rate = 1
 persist = true
 
-[observability.issue_detection]
-enabled = true
-
 [[d1_databases]]
 binding = "DB"
 database_id = "5967539e-1748-4da6-9808-8f5084360d67"
