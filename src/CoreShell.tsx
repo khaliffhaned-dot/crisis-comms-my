@@ -251,6 +251,7 @@ export default function CoreShell() {
               }}
               onCreate={onCreate}
               onGo={(s) => setSection(s as CoreSection)}
+              onApplySeverity={(level) => setSeverity(level)}
             />
           )}
 
