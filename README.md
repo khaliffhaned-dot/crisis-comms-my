@@ -1,25 +1,47 @@
 # Escalate MY
 
-**Operational crisis communications playbook and manual for Bursa Malaysia–listed companies.**
+**Crisis Intelligence Platform for Malaysian Organisations.**
 
-Bilingual (Bahasa Malaysia + English) · Vite + React + TypeScript
+Live: https://escalate-my.pages.dev  
+API: https://escalate-my-api.khaliffhaned.workers.dev  
+MCP: https://escalate-my-mcp.khaliffhaned.workers.dev/mcp
 
-## Features
+Bilingual (Bahasa Malaysia + English) · Vite + React + TypeScript  
+Company: Quantum PR
 
-- **Landing page** with clear value proposition and CTAs
-- **Playbook Mode** (live operational use)
-  - Severity assessment (Levels 1–4)
-  - First Sixty Minutes checklist
-  - Holding Statement Builder (6 scenario types)
-  - Decision log with timestamps
-- **Manual Mode** (reference & training)
-  - Guiding principles, roles, stakeholder priorities
-  - Media & digital protocols
-  - Bahasa Malaysia guidance
-  - East Malaysia considerations
-  - Post-crisis review steps
-  - Glossary
-- Full BM / EN language toggle across the entire app
+## Product
+
+- Landing — Crisis Intelligence positioning
+- Command Centre
+- Incident Management
+- First Sixty Minutes
+- Decision Quorum
+- Regulatory Clock
+- Holding Statement Builder
+- Audit Trail
+- Decision Intelligence™ / Regulatory Intelligence™ / Board Intelligence™
+
+Recommendations only. Quorum before any external statement or filing.
+
+## API wiring
+
+Frontend calls the Worker at `/api/v1/intelligence/assess`.
+
+Default base (override with env):
+
+```text
+VITE_API_BASE=https://escalate-my-api.khaliffhaned.workers.dev
+```
+
+Set this on the Cloudflare Pages project **escalate-crisis-intel**, then redeploy.
+
+Health check:
+
+```bash
+curl https://escalate-my-api.khaliffhaned.workers.dev/health
+```
+
+If the API is unreachable, Decision Intelligence falls back to the local rules engine (`source: local`).
 
 ## Quick start
 
@@ -28,19 +50,17 @@ npm install
 npm run dev
 ```
 
-Open the URL shown in the terminal (usually `http://localhost:5173`).
-
-## Build
+## Build & deploy
 
 ```bash
 npm run build
-npm run preview
+npx wrangler pages deploy dist --project-name escalate-crisis-intel
 ```
 
 ## Disclaimer
 
-This tool does not constitute legal advice. All regulatory references should be verified against the latest Bursa Malaysia Listing Requirements, Companies Act 2016, PDPA, and advice from external counsel.
+Operational guidance only — not legal advice. Verify obligations with counsel.
 
 ## Licence
 
-Private / proprietary – for authorised use only.
+Private / proprietary — for authorised use only.
