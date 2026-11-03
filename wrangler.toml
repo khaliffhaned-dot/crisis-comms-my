@@ -1,5 +1,4 @@
-# wrangler.toml
-name = 'escalate-my-mcp'
+name = "escalate-my-war-room"
 main = "worker/src/index.ts"
 compatibility_date = "2026-10-01"
 
