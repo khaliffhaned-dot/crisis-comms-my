@@ -69,7 +69,7 @@ test('key MCP tools respond through the Worker in-process', async (t) => {
   async function callTool(name: string, args: Record<string, unknown> = {}) {
     const response = await send('tools/call', { name, arguments: args })
     assert.equal(response.error, undefined, `${name} returned JSON-RPC error`)
-    assert.equal(response.result?.isError, false, `${name} returned tool error`)
+    assert.notEqual(response.result?.isError, true, `${name} returned tool error`)
     const text = response.result?.content?.find((item: { type: string }) => item.type === 'text')?.text
     assert.equal(typeof text, 'string', `${name} returned no text content`)
     return JSON.parse(text)

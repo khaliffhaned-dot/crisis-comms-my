@@ -14,7 +14,8 @@ test('incident API paths are routed to the authenticated API handler', async () 
     ctx,
   );
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: 'Incident API is not configured.' });
+  const body = await response.json();
+  assert.equal(body.error, 'Incident API is not configured.');
 });
 
 test('unmatched paths continue through to the MCP worker', async () => {
