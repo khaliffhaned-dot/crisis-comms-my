@@ -1,4 +1,4 @@
-/** Decision Intelligence client — hits Escalate MY API when VITE_API_BASE is set */
+/** Decision Intelligence client — hits Escalate MY API when configured */
 
 export interface AssessResult {
   severity: 1 | 2 | 3 | 4
@@ -10,12 +10,19 @@ export interface AssessResult {
   disclaimer: string
 }
 
+const DEFAULT_API = 'https://escalate-my-api.khaliffhaned.workers.dev'
+
 function base(): string {
-  return ((import.meta as any).env?.VITE_API_BASE || '').replace(/\/$/, '')
+  const fromEnv = ((import.meta as any).env?.VITE_API_BASE || '').replace(/\/$/, '')
+  return fromEnv || DEFAULT_API
 }
 
 export function hasApiBase(): boolean {
   return Boolean(base())
+}
+
+export function apiBaseUrl(): string {
+  return base()
 }
 
 export async function assessIncident(input: {
@@ -26,9 +33,6 @@ export async function assessIncident(input: {
   regulatoryInvolved?: boolean
 }): Promise<AssessResult> {
   const url = base()
-  if (!url) {
-    throw new Error('VITE_API_BASE not configured')
-  }
   const res = await fetch(`${url}/api/v1/intelligence/assess`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -38,14 +42,14 @@ export async function assessIncident(input: {
     const t = await res.text()
     throw new Error(t || `Assess failed (${res.status})`)
   }
-  return res.json() as Promise<AssessResult>
+  const data = (await res.json()) as AssessResult
+  return { ...data, source: data.source || 'api' }
 }
 
-/** Offline fallback — mirrors API rules engine for local demo */
 export function assessIncidentLocal(facts: string, bursaListed = true): AssessResult {
   let severity: 1 | 2 | 3 | 4 = 1
   if (/media|news|viral/i.test(facts)) severity = 2
-  if (/bursa|material|investor|share/i.test(facts) || bursaListed && /recall|breach|accident/i.test(facts))
+  if (/bursa|material|investor|share/i.test(facts) || (bursaListed && /recall|breach|accident/i.test(facts)))
     severity = 3
   if (/fatality|nationwide|regulator|sc |bnm/i.test(facts)) severity = 4
   const first_actions = [
