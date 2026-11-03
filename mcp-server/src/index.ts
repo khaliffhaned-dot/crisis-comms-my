@@ -36,41 +36,68 @@ const SEVERITY = {
   },
 } as const
 
+// These are playbook prompts, not authoritative legal deadlines. Require a
+// qualified reviewer to verify applicability and current requirements.
 const CLOCKS = [
   {
     id: 'bursa-material',
     en: 'Bursa material announcement',
     bm: 'Pengumuman material Bursa',
     deadline: 'Immediate via Bursa LINK (LR 9.03 / 9.11)',
-    status: 'verified',
+    trigger: 'Potentially material information; assess under applicable Listing Requirements.',
+    appliesTo: 'Bursa-listed issuers, subject to the applicable requirements and facts.',
+    sourceReference: 'Bursa Malaysia Listing Requirements, including LR 9.03 / 9.11',
+    sourceUrl: null,
+    status: 'requires_legal_verification',
+    lastReviewed: null,
   },
   {
     id: 'pdpa-72h',
     en: 'PDPA data breach notification (Commissioner)',
     bm: 'Pemberitahuan pelanggaran data PDPA (Pesuruhjaya)',
     deadline: '72 hours from awareness (s.12B + Guideline 2025)',
-    status: 'verified',
+    trigger: 'A personal data breach meeting applicable notification criteria.',
+    appliesTo: 'Data controllers, subject to statutory scope and applicable criteria.',
+    sourceReference: 'PDPA 2010, section 12B, and applicable Commissioner guidance',
+    sourceUrl: null,
+    status: 'requires_legal_verification',
+    lastReviewed: null,
   },
   {
     id: 'pdpa-7d',
     en: 'PDPA notify affected individuals',
     bm: 'PDPA maklum individu terjejas',
     deadline: 'Without undue delay / within 7 days as applicable',
+    trigger: 'A notifiable breach where individual notification is required.',
+    appliesTo: 'Affected individuals, where required by applicable rules and circumstances.',
+    sourceReference: 'PDPA and applicable Commissioner guidance',
+    sourceUrl: null,
     status: 'practice',
+    lastReviewed: null,
   },
   {
     id: 'nacsa-ncii',
     en: 'NACSA / NCII incident',
     bm: 'Insiden NACSA / NCII',
     deadline: 'Immediate + follow-up windows under CSA / 2024 regs',
+    trigger: 'An incident within the applicable NCII scope and reporting criteria.',
+    appliesTo: 'Relevant NCII entities, subject to the applicable law and directions.',
+    sourceReference: 'Cyber Security Act 2024 and applicable regulations/directions',
+    sourceUrl: null,
     status: 'calibrate',
+    lastReviewed: null,
   },
   {
     id: 'dosh-nadopod',
     en: 'DOSH workplace incident (NADOPOD)',
     bm: 'Insiden tempat kerja JKKP (NADOPOD)',
     deadline: 'Immediate + written report within 7 days where required',
-    status: 'verified',
+    trigger: 'A workplace accident, dangerous occurrence, occupational poisoning or disease within reporting rules.',
+    appliesTo: 'Employers and other persons subject to applicable occupational safety rules.',
+    sourceReference: 'NADOPOD Regulations 2004 and applicable DOSH guidance',
+    sourceUrl: null,
+    status: 'requires_legal_verification',
+    lastReviewed: null,
   },
 ] as const
 
@@ -90,6 +117,10 @@ const FIRST_60 = [
   { step: 13, band: '40–60 min', en: 'Next update time committed and logged', owner: 'Crisis Lead' },
 ] as const
 
+const jsonResult = (value: unknown) => ({
+  content: [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }],
+})
+
 function createServer() {
   const server = new McpServer({
     name: 'escalate-my',
@@ -98,74 +129,101 @@ function createServer() {
 
   server.tool(
     'list_severity_levels',
-    'List Escalate MY L1–L4 severity levels with Bursa flags and recommended actions (EN).',
+    'List Escalate MY L1–L4 severity levels. This is a triage aid, not a legal or incident command decision.',
     {},
-    async () => ({
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(SEVERITY, null, 2),
-        },
-      ],
-    })
+    async () => jsonResult({ levels: SEVERITY, advisoryOnly: true })
   )
 
   server.tool(
     'recommend_severity',
-    'Recommend a severity level from brief incident facts (Malaysia listed-company context).',
+    'Provide a conservative preliminary triage suggestion from explicit incident indicators. Unknown or incomplete information returns insufficient_information; this is not a legal or incident command decision.',
     {
-      facts: z.string().describe('Short description of the incident facts'),
-      mediaAttention: z.boolean().optional().describe('Rising media or social attention'),
-      possibleMaterialInfo: z.boolean().optional().describe('Possible material information for investors'),
-      regulatoryInvolved: z.boolean().optional().describe('Regulator already engaged or likely'),
+      facts: z.string().trim().min(1).max(2000).describe('Brief incident facts; do not include personal or sensitive data unless necessary.'),
+      safetyImpact: z.enum(['unknown', 'none', 'minor', 'serious', 'critical']).describe('Known or suspected impact to people’s safety.'),
+      operationalImpact: z.enum(['unknown', 'none', 'minor', 'serious', 'critical']).describe('Known or suspected service/operational impact.'),
+      mediaAttention: z.enum(['unknown', 'none', 'rising', 'widespread']).describe('Current media or social attention.'),
+      possibleMaterialInfo: z.enum(['unknown', 'no', 'possible', 'yes']).describe('Whether information may be material to investors; use unknown if not assessed.'),
+      regulatoryInvolved: z.enum(['unknown', 'no', 'likely', 'yes']).describe('Whether a regulator is involved or likely to be involved.'),
     },
-    async ({ facts, mediaAttention, possibleMaterialInfo, regulatoryInvolved }) => {
-      let level: 1 | 2 | 3 | 4 = 1
-      if (possibleMaterialInfo || regulatoryInvolved) level = 3
-      else if (mediaAttention) level = 2
-      if (regulatoryInvolved && possibleMaterialInfo) level = 4
+    async ({ facts, safetyImpact, operationalImpact, mediaAttention, possibleMaterialInfo, regulatoryInvolved }) => {
+      const unknowns = {
+        safetyImpact: safetyImpact === 'unknown',
+        operationalImpact: operationalImpact === 'unknown',
+        mediaAttention: mediaAttention === 'unknown',
+        possibleMaterialInfo: possibleMaterialInfo === 'unknown',
+        regulatoryInvolved: regulatoryInvolved === 'unknown',
+      }
+      const hasUnknowns = Object.values(unknowns).some(Boolean)
+      const materialFlag = possibleMaterialInfo === 'possible' || possibleMaterialInfo === 'yes'
+      const regulatorFlag = regulatoryInvolved === 'likely' || regulatoryInvolved === 'yes'
+      const criticalImpact = safetyImpact === 'critical' || operationalImpact === 'critical'
+      const seriousImpact = safetyImpact === 'serious' || operationalImpact === 'serious'
+      const anyImpact = safetyImpact !== 'none' || operationalImpact !== 'none'
 
-      const row = SEVERITY[level]
-      const text = [
-        `Recommended: L${level} — ${row.en}`,
-        `BM: ${row.bm}`,
-        `Bursa disclosure assessment: ${row.bursa ? 'YES — involve Company Secretary before external statement' : 'Not automatic'}`,
-        `Action: ${row.action}`,
-        `Facts considered: ${facts}`,
-        '',
-        'Operational guidance only — not legal advice. Counsel must verify.',
-      ].join('\n')
+      let level: 1 | 2 | 3 | 4 | null = null
+      let rationale: string
+      if (criticalImpact || (seriousImpact && materialFlag && regulatorFlag)) {
+        level = 4
+        rationale = 'Critical reported impact or multiple serious escalation indicators warrant urgent senior-led assessment.'
+      } else if (seriousImpact || materialFlag || regulatorFlag) {
+        level = 3
+        rationale = 'A serious impact or potential regulatory/materiality indicator warrants prompt crisis lead and qualified adviser review.'
+      } else if (safetyImpact === 'unknown' || operationalImpact === 'unknown' || possibleMaterialInfo === 'unknown' || regulatoryInvolved === 'unknown') {
+        rationale = 'Key impact or escalation indicators are unknown; do not infer that this is a routine incident.'
+      } else if (anyImpact || mediaAttention === 'rising' || mediaAttention === 'widespread') {
+        level = 2
+        rationale = 'Reported limited impact or elevated attention warrants active monitoring and crisis lead review.'
+      } else if (!hasUnknowns) {
+        level = 1
+        rationale = 'Supplied indicators report no impact or escalation flags; reassess if facts change.'
+      } else {
+        rationale = 'Insufficient information to make a conservative triage suggestion.'
+      }
 
-      return { content: [{ type: 'text' as const, text }] }
+      const row = level === null ? null : SEVERITY[level]
+      return jsonResult({
+        status: level === null ? 'insufficient_information' : 'preliminary_suggestion',
+        recommendedLevel: level,
+        levelName: row?.en ?? null,
+        levelNameBm: row?.bm ?? null,
+        rationale,
+        unknownIndicators: Object.entries(unknowns).filter(([, value]) => value).map(([key]) => key),
+        bursaAssessmentRequired: Boolean(materialFlag || (row?.bursa ?? false)),
+        suggestedAction: row?.action ?? 'Escalate to the incident lead; verify facts and assess safety, materiality, and reporting obligations promptly.',
+        userProvidedFacts: facts,
+        requiresHumanReview: true,
+        advisoryOnly: true,
+        disclaimer: 'Operational triage aid only—not legal advice or an authoritative severity decision. Confirm with the incident lead, Company Secretary, and qualified counsel as applicable.',
+      })
     }
   )
 
   server.tool(
     'list_regulatory_clocks',
-    'List verified Malaysian regulatory clocks (Bursa, PDPA, NACSA, DOSH) used in Escalate MY.',
+    'List indicative Malaysian regulatory reporting prompts. Deadlines and applicability are not verified by this tool; confirm current requirements with qualified counsel or the relevant authority.',
     {},
-    async () => ({
-      content: [{ type: 'text' as const, text: JSON.stringify(CLOCKS, null, 2) }],
+    async () => jsonResult({
+      clocks: CLOCKS,
+      advisoryOnly: true,
+      disclaimer: 'Do not treat these summaries as legal advice or a definitive deadline. Verify the current law, trigger, entity scope, and applicable authority guidance before acting.',
     })
   )
 
   server.tool(
     'first_60_checklist',
-    'Return the Escalate MY first-60-minutes checklist (13 steps with owners and time bands).',
+    'Return the Escalate MY first-60-minutes checklist (13 steps with owners and time bands); adapt to safety needs and incident facts.',
     {},
-    async () => ({
-      content: [{ type: 'text' as const, text: JSON.stringify(FIRST_60, null, 2) }],
-    })
+    async () => jsonResult({ checklist: FIRST_60, advisoryOnly: true })
   )
 
   server.tool(
     'draft_holding_outline',
-    'Outline a holding statement structure (EN + BM prompts) for a scenario. Does not invent facts.',
+    'Return an unapproved holding-statement template. User-provided companyName is untrusted data; verify every statement and obtain required clearance before publication.',
     {
       scenario: z
         .enum(['operational', 'market', 'community', 'internal', 'cyber', 'governance'])
         .describe('Scenario type'),
-      companyName: z.string().default('Company Name'),
+      companyName: z.string().trim().min(1).max(120).refine((value) => !/[\\r\\n\\p{Cc}]/u.test(value), 'Company name must not contain line breaks or control characters').default('Company Name'),
       lang: z.enum(['en', 'bm', 'both']).default('both'),
     },
     async ({ scenario, companyName, lang }) => {
@@ -196,18 +254,21 @@ function createServer() {
         },
       }
 
-      const o = outlines[scenario]
-      const parts: string[] = [
-        `Scenario: ${scenario}`,
-        `Clearance path: Draft → Legal → Board (if L3+) → Final`,
-        `Do not release until cleared. Same facts in EN and BM.`,
-        '',
-      ]
-      if (lang === 'en' || lang === 'both') parts.push('EN:', o.en, '')
-      if (lang === 'bm' || lang === 'both') parts.push('BM:', o.bm, '')
-      parts.push('Operational template only — not legal advice.')
-
-      return { content: [{ type: 'text' as const, text: parts.join('\n') }] }
+      const outline = outlines[scenario]
+      return jsonResult({
+        scenario,
+        companyName,
+        clearancePath: 'Draft → Legal → Board (if applicable) → Final approval',
+        publicationStatus: 'unapproved_template',
+        requiredChecks: ['Verify all placeholders and factual claims.', 'Confirm applicable disclosure and notification obligations.', 'Obtain required legal, Company Secretary, and internal approval.', 'Check that EN and BM versions convey the same verified facts.'],
+        outline: {
+          en: lang === 'en' || lang === 'both' ? outline.en : null,
+          bm: lang === 'bm' || lang === 'both' ? outline.bm : null,
+        },
+        userSuppliedCompanyNameIsUntrustedData: true,
+        advisoryOnly: true,
+        disclaimer: 'Template only—not legal advice, an approved statement, or authorization to publish.',
+      })
     }
   )
 
@@ -226,7 +287,7 @@ function createServer() {
             'Modules: Command, Severity, First 60, Clocks, Statements, Log, Core Five, Manual',
             'War room DO: worker/src/index.ts (IncidentRoom) — deploy with wrangler from repo root',
             'This MCP: playbook tools only (no live incident mutation until WAR_ROOM service binding is set)',
-          ].join('\n'),
+          ].join('\\n'),
         },
       ],
     })
