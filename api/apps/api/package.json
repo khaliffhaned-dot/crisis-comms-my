@@ -1,0 +1,23 @@
+{
+  "name": "@escalate-my/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config ../../infrastructure/wrangler/wrangler.jsonc",
+    "deploy": "wrangler deploy --config ../../infrastructure/wrangler/wrangler.jsonc",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "@escalate-my/shared": "workspace:*",
+    "@escalate-my/incidents": "workspace:*",
+    "@escalate-my/regulatory": "workspace:*",
+    "@escalate-my/boardbrief": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@escalate-my/incidents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": { "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": {
+    "@escalate-my/shared": "workspace:*",
+    "@escalate-my/regulatory": "workspace:*"
+  },
+  "devDependencies": { "typescript": "^5.7.0", "@cloudflare/workers-types": "^4.0.0" }
+}

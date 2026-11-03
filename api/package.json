@@ -1,0 +1,18 @@
+{
+  "name": "escalate-my-api-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Escalate MY™ Intelligence API — pnpm workspace migrated from khaliffhaned-dot/escalate-my into escalate_crisisintel/api.",
+  "scripts": {
+    "dev:api": "pnpm --filter @escalate-my/api dev",
+    "deploy:api": "pnpm --filter @escalate-my/api deploy",
+    "db:migrate:local": "wrangler d1 migrations apply escalate-my-db --local --config infrastructure/wrangler/wrangler.jsonc",
+    "db:migrate:remote": "wrangler d1 migrations apply escalate-my-db --remote --config infrastructure/wrangler/wrangler.jsonc",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
