@@ -262,7 +262,7 @@ function createServer() {
         text: [
           'Escalate MY — Crisis Intelligence Platform for Malaysian Organisations',
           'Live: https://escalate-my.pages.dev/',
-          'Repo: https://github.com/khaliffhaned-dot/crisis-comms-my',
+          'Repo: https://github.com/khaliffhaned-dot/escalate_crisisintel',
           'Modules: Command Centre, Severity, First 60, Regulatory Clocks, Holding Statements, Decision Quorum, BoardBrief, Audit',
           'This MCP provides advisory playbook tools only.',
         ].join('\n'),
