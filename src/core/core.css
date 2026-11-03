@@ -1,0 +1,166 @@
+.core-command__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.core-command__top h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--navy, #18181b);
+}
+.core-muted { color: var(--text-secondary, #71717a); font-size: 0.88rem; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; }
+
+.core-kpi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.core-kpi__card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-color, #e5e5e0);
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+.core-kpi__card.warn { border-color: #fecaca; background: #fff7f7; }
+.core-kpi__card .lbl {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #71717a);
+}
+.core-kpi__card .val {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-top: 0.25rem;
+  color: var(--navy, #18181b);
+}
+
+.core-panel {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-color, #e5e5e0);
+  border-radius: 16px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+}
+.core-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.core-panel__head h3 { margin: 0; font-size: 0.95rem; font-weight: 700; }
+
+.core-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.core-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.core-table td {
+  padding: 0.65rem 0.4rem;
+  border-bottom: 1px solid var(--surface-muted, #f0f0ed);
+  vertical-align: middle;
+}
+.core-table tr.is-active { background: #fef2f2; }
+
+.core-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.quorum-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.quorum-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.quorum-row.state-approved { border-color: #a7f3d0; background: #ecfdf5; }
+.quorum-row.state-rejected { border-color: #fecaca; background: #fef2f2; }
+.quorum-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.quorum-actions .btn.is-on {
+  background: var(--navy, #18181b);
+  color: white;
+  border-color: var(--navy, #18181b);
+}
+
+.audit-list { list-style: none; margin: 0; padding: 0; }
+.audit-list li {
+  display: grid;
+  grid-template-columns: 11rem 7rem 1fr;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--surface-muted, #f0f0ed);
+  font-size: 0.88rem;
+}
+.audit-actor { font-weight: 600; }
+
+.dir-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+.dir-card {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+}
+.dir-card:hover { border-color: #dc2626; }
+.dir-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: #18181b;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.backend-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-muted, #f0f0ed);
+  color: var(--text-secondary);
+}
+.backend-pill.api { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.backend-pill.war-room { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+
+@media (max-width: 900px) {
+  .core-kpi { grid-template-columns: 1fr 1fr; }
+  .audit-list li { grid-template-columns: 1fr; gap: 0.15rem; }
+}
