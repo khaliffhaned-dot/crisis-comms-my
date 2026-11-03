@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "test": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
