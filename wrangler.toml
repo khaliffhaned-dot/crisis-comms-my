@@ -1,7 +1,9 @@
-# wrangler.toml
-name = 'escalate-my-mcp'
+name = "escalate-my-mcp"
 main = "worker/src/index.ts"
 compatibility_date = "2025-06-01"
+
+# Cloudflare Pages reads this so the SPA build is published from Vite's dist/
+pages_build_output_dir = "dist"
 
 [durable_objects]
 bindings = [
@@ -12,7 +14,6 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["IncidentRoom"]
 
-# ...
 [observability.logs]
 enabled = true
 head_sampling_rate = 1
@@ -27,7 +28,6 @@ persist = true
 [observability.issue_detection]
 enabled = true
 
-# ...
 [[d1_databases]]
 binding = "DB"
 database_id = "5967539e-1748-4da6-9808-8f5084360d67"
@@ -35,10 +35,3 @@ database_id = "5967539e-1748-4da6-9808-8f5084360d67"
 [[r2_buckets]]
 binding = "REPORTS"
 bucket_name = "escalate-reports"
-# ...
-
-# ...
-# Optional: serve SPA assets from same Worker later
-# [assets]
-# directory = "./dist"
-# not_found_handling = "single-page-application"
