@@ -1,0 +1,49 @@
+/* Escalate MY — light theme design tokens (v1.4) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap');
+
+:root {
+  --font-family: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+
+  --background: #f7f7f5;
+  --surface: #ffffff;
+  --surface-muted: #f0f0ed;
+  --border-color: #e5e5e0;
+  --border-strong: #d4d4d0;
+
+  --primary: #dc2626;
+  --primary-hover: #b91c1c;
+  --primary-soft: #fef2f2;
+  --primary-ring: rgba(220, 38, 38, 0.25);
+
+  --navy: #18181b;
+  --text-primary: #18181b;
+  --text-secondary: #71717a;
+  --text-on-primary: #ffffff;
+
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --warning: #d97706;
+  --warning-soft: #fffbeb;
+  --info: #2563eb;
+  --danger: #dc2626;
+
+  --saffron: #dc2626;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* aliases used by existing modules */
+  --surface-light: var(--surface-muted);
+  --radius: var(--radius-md);
+  --border: var(--border-color);
+  --text: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --card: var(--surface);
+  --bg: var(--background);
+}
