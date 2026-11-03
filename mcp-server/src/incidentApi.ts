@@ -1,5 +1,5 @@
-import type { Env } from '../env';
-import type { CreateIncidentInput, Incident } from '../types/incident';
+import type { Env } from './env';
+import type { CreateIncidentInput, Incident } from './types/incident';
 import {
   closeIncidentTool,
   createIncidentTool,

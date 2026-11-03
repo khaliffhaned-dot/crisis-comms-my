@@ -1,4 +1,5 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import '@modelcontextprotocol/server/_shims'
+import { McpServer } from '@modelcontextprotocol/server'
 import { createMcpHandler } from 'agents/mcp/server'
 import { z } from 'zod'
 
@@ -273,7 +274,9 @@ function createServer() {
   return server
 }
 
-const mcpHandler = createMcpHandler(createServer)
+const mcpHandler = createMcpHandler(createServer, {
+  onerror: (err) => console.error('MCP handler error:', err.stack || err.message || err),
+})
 
 export default {
   async fetch(request: Request, env: unknown, ctx: ExecutionContext): Promise<Response> {

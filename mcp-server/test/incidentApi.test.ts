@@ -1,8 +1,8 @@
-import type { Env } from './env';
-import { handleIncidentApi } from './incidentApi';
+import type { Env } from '../src/env';
+import { handleIncidentApi } from '../src/incidentApi';
 
 const token = 'test-secret-token';
-const env = { INCIDENT_API_TOKEN: token } as Env;
+const env = { INCIDENT_API_TOKEN: token, DB: {} as D1Database } as Env;
 const auth = { Authorization: `Bearer ${token}` };
 
 function request(path: string, init: RequestInit = {}) {

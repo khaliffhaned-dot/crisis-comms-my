@@ -1,4 +1,4 @@
-import type { Env } from './env';
+import type { Env } from '../env';
 import type { CreateIncidentInput, Incident } from '../types/incident';
 
 function requireDatabase(env: Env): D1Database {
