@@ -3,6 +3,7 @@ import type { Incident, Lang } from './types'
 import {
   assessIncident,
   assessIncidentLocal,
+  apiBaseUrl,
   hasApiBase,
   type AssessResult,
 } from './intelligenceApi'
@@ -33,6 +34,16 @@ export default function CommandCentre({
   const critical = open.filter((i) => i.severity && i.severity >= 3).length
   const active = incidents.find((i) => i.id === activeId) || open[0]
 
+  const done = active ? active.checked.filter(Boolean).length : 0
+  const total = active ? active.checked.length : 0
+  const quorumPending = active ? active.quorum.filter((q) => q.state === 'pending').length : 0
+  let readiness = 40
+  if (active?.severity) readiness += 15
+  if (active?.statement) readiness += 10
+  if (active && quorumPending === 0 && active.quorum.length) readiness += 20
+  if (total && done === total) readiness += 10
+  readiness = Math.min(100, readiness)
+
   const [facts, setFacts] = useState(
     active?.title
       ? `${active.title}. Listed company context.`
@@ -47,12 +58,7 @@ export default function CommandCentre({
     setLoading(true)
     setError(null)
     try {
-      if (hasApiBase()) {
-        const r = await assessIncident({ facts, bursaListed })
-        setResult(r)
-      } else {
-        setResult(assessIncidentLocal(facts, bursaListed))
-      }
+      setResult(hasApiBase() ? await assessIncident({ facts, bursaListed }) : assessIncidentLocal(facts, bursaListed))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Assess failed')
       setResult(assessIncidentLocal(facts, bursaListed))
@@ -67,14 +73,10 @@ export default function CommandCentre({
         <div>
           <h2>{t('Command Centre', 'Pusat Perintah')}</h2>
           <p className="core-muted">
-            {t('Active incidents · readiness · executive view', 'Insiden aktif · kesediaan · paparan eksekutif')}
+            {t('From uncertainty to action', 'Daripada ketidakpastian kepada tindakan')}
             {' · '}
-            <span className="mono">{backend}</span>
-            {hasApiBase() ? (
-              <span className="backend-pill api"> API</span>
-            ) : (
-              <span className="backend-pill"> local assess</span>
-            )}
+            <span className={`backend-pill ${hasApiBase() ? 'api' : ''}`}>{hasApiBase() ? 'API' : 'local'}</span>
+            <span className="mono" style={{ marginLeft: 8 }}>{backend}</span>
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={onCreate}>
@@ -87,7 +89,7 @@ export default function CommandCentre({
           <span className="lbl">{t('Open', 'Terbuka')}</span>
           <span className="val">{open.length}</span>
         </div>
-        <div className="core-kpi__card warn">
+        <div className={`core-kpi__card ${critical ? 'warn' : ''}`}>
           <span className="lbl">{t('L3+ Material', 'T3+ Material')}</span>
           <span className="val">{critical}</span>
         </div>
@@ -96,23 +98,20 @@ export default function CommandCentre({
           <span className="val">{active?.severity ? `L${active.severity}` : '—'}</span>
         </div>
         <div className="core-kpi__card">
-          <span className="lbl">{t('First 60 progress', 'Kemajuan 60 min')}</span>
-          <span className="val">
-            {active ? `${active.checked.filter(Boolean).length}/${active.checked.length}` : '—'}
-          </span>
+          <span className="lbl">{t('Readiness', 'Kesediaan')}</span>
+          <span className="val">{active ? `${readiness}` : '—'}</span>
         </div>
       </div>
 
-      {/* Decision Intelligence */}
       <div className="core-panel intel-panel">
         <div className="core-panel__head">
-          <h3>{t('Decision Intelligence', 'Kepintaran Keputusan')}</h3>
+          <h3>{t('Decision Intelligence™', 'Kepintaran Keputusan™')}</h3>
           <span className="module-card__badge">{t('Recommend only', 'Cadangan sahaja')}</span>
         </div>
         <p className="core-muted" style={{ marginBottom: '0.75rem' }}>
           {t(
-            'What should leadership do next? Recommendations require Quorum before any external action.',
-            'Apa yang perlu dilakukan kepimpinan seterusnya? Cadangan memerlukan Kuorum sebelum sebarang tindakan luaran.'
+            'What should leadership do next? Quorum is required before any external action.',
+            'Apa yang perlu dilakukan kepimpinan seterusnya? Kuorum diperlukan sebelum sebarang tindakan luaran.'
           )}
         </p>
         <div className="form-row">
@@ -130,9 +129,7 @@ export default function CommandCentre({
         </label>
         <div className="btn-row" style={{ marginTop: '0.75rem' }}>
           <button type="button" className="btn btn-primary" disabled={loading || !facts.trim()} onClick={runAssess}>
-            {loading
-              ? t('Assessing…', 'Menilai…')
-              : t('Run assessment', 'Jalankan penilaian')}
+            {loading ? t('Assessing…', 'Menilai…') : t('Run assessment', 'Jalankan penilaian')}
           </button>
         </div>
         {error && (
@@ -144,32 +141,21 @@ export default function CommandCentre({
           <div className="intel-result">
             <div className="intel-result__meta">
               <span className="intel-sev">L{result.severity}</span>
-              <span>
-                {t('Confidence', 'Keyakinan')} {result.confidence}%
-              </span>
-              <span>
-                {t('Regulatory risk', 'Risiko kawal selia')}: {result.regulatory_risk}
-              </span>
+              <span>{t('Confidence', 'Keyakinan')} {result.confidence}%</span>
+              <span>{t('Regulatory risk', 'Risiko kawal selia')}: {result.regulatory_risk}</span>
               <span className="mono">{result.source}</span>
             </div>
             <p className="core-muted">{result.rationale}</p>
-            <ol className="intel-actions">
-              {result.first_actions.map((a) => (
-                <li key={a}>{a}</li>
-              ))}
-            </ol>
+            <ol className="intel-actions">{result.first_actions.map((a) => <li key={a}>{a}</li>)}</ol>
             <p className="stmt-hint">{result.disclaimer}</p>
             {onApplySeverity && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => onApplySeverity(result.severity)}
-              >
+              <button type="button" className="btn btn-secondary" onClick={() => onApplySeverity(result.severity)}>
                 {t(`Apply L${result.severity} to active incident`, `Guna L${result.severity} pada insiden aktif`)}
               </button>
             )}
           </div>
         )}
+        <p className="stmt-hint" style={{ marginTop: '0.5rem' }}>{apiBaseUrl()}</p>
       </div>
 
       <div className="core-panel">
@@ -177,7 +163,7 @@ export default function CommandCentre({
           <h3>{t('Active incidents', 'Insiden aktif')}</h3>
         </div>
         {open.length === 0 ? (
-          <p className="core-muted">{t('No open incidents.', 'Tiada insiden terbuka.')}</p>
+          <p className="core-muted">{t('No open incidents. Create one to begin.', 'Tiada insiden terbuka. Cipta satu untuk bermula.')}</p>
         ) : (
           <table className="core-table">
             <thead>
@@ -211,18 +197,11 @@ export default function CommandCentre({
       </div>
 
       <div className="core-quick">
-        <button type="button" className="btn btn-secondary" onClick={() => onGo('first60')}>
-          {t('First 60 min', '60 min pertama')}
-        </button>
-        <button type="button" className="btn btn-secondary" onClick={() => onGo('clocks')}>
-          {t('Regulatory clocks', 'Jam pengawalseliaan')}
-        </button>
-        <button type="button" className="btn btn-secondary" onClick={() => onGo('quorum')}>
-          {t('Decision quorum', 'Kuorum keputusan')}
-        </button>
-        <button type="button" className="btn btn-secondary" onClick={() => onGo('statements')}>
-          {t('Statements', 'Kenyataan')}
-        </button>
+        <button type="button" className="btn btn-secondary" onClick={() => onGo('first60')}>{t('First 60 min', '60 min pertama')}</button>
+        <button type="button" className="btn btn-secondary" onClick={() => onGo('clocks')}>{t('Regulatory Clock', 'Jam Pematuhan')}</button>
+        <button type="button" className="btn btn-secondary" onClick={() => onGo('quorum')}>{t('Decision Quorum', 'Kuorum Keputusan')}</button>
+        <button type="button" className="btn btn-secondary" onClick={() => onGo('decision-intel')}>{t('Decision Intelligence', 'Kepintaran Keputusan')}</button>
+        <button type="button" className="btn btn-secondary" onClick={() => onGo('board-intel')}>{t('Board Intelligence', 'Kepintaran Lembaga')}</button>
       </div>
     </div>
   )

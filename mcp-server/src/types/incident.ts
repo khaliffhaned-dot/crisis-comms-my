@@ -9,6 +9,8 @@ export interface Incident {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  /** Optional serialized frontend domain model; never returned as a raw string by the API. */
+  client_payload?: string | null;
 }
 
 export interface CreateIncidentInput {
