@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "escalate-my"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "5967539e-1748-4da6-9808-8f5084360d67"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
@@ -15,4 +15,4 @@ bucket_name = "escalate-reports"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "REPLACE_WITH_KV_ID"
+id = "93a0c7eccfde443e978510938e44f419"
