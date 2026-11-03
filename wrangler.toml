@@ -12,6 +12,21 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["IncidentRoom"]
 
+# ...
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+persist = true
+
+[observability.issue_detection]
+enabled = true
+# ...
 # Optional: serve SPA assets from same Worker later
 # [assets]
 # directory = "./dist"
