@@ -1,17 +1,3 @@
-name = "escalate-my-war-room"
-main = "worker/src/index.ts"
-compatibility_date = "2026-10-01"
-
-[durable_objects]
-bindings = [
-  { name = "INCIDENT_ROOM", class_name = "IncidentRoom" }
-]
-
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["IncidentRoom"]
-
-# Optional: serve SPA assets from same Worker later
-# [assets]https://github.com/khaliffhaned-dot/escalate_crisisintel/pull/7/conflict?name=wrangler.toml&ancestor_oid=09fb60a601379b255eb6e4652f4160abd66d49df&base_oid=845d819be37bf619ac4ada51526349faefdd5022&head_oid=744260b2e06616526637ad6011693090ddf4e446
-# directory = "./dist"
-# not_found_handling = "single-page-application"
+name = "escalate-crisis-intel"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-06-01"
