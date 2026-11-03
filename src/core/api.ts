@@ -1,7 +1,7 @@
 /**
  * Backend client for Escalate MY Core.
  * Prefers war-room Worker (VITE_WAR_ROOM_WS / VITE_API_BASE).
- * Falls back to localStorage when offline.
+ * Falls back to localStorage only when no remote backend is configured.
  */
 import type { Incident, AuditEntry } from './types'
 import { newIncident } from './types'
@@ -34,6 +34,10 @@ function saveLocal(list: Incident[]) {
   }
 }
 
+function remoteError(message: string): Error {
+  return new Error(message)
+}
+
 export function appendAudit(inc: Incident, actor: string, action: string, detail?: string): Incident {
   const entry: AuditEntry = {
     id: `AUD-${Date.now()}`,
@@ -49,16 +53,35 @@ export function appendAudit(inc: Incident, actor: string, action: string, detail
   }
 }
 
+async function fetchRemoteJson<T>(path: string): Promise<T> {
+  const base = apiBase()
+  if (!base) {
+    throw remoteError('No API backend configured.')
+  }
+
+  const url = `${base.replace(/\/$/, '')}${path}`
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw remoteError(`Backend request failed (${res.status}) for ${path}`)
+  }
+
+  return (await res.json()) as T
+}
+
 export async function listIncidents(): Promise<Incident[]> {
   const base = apiBase()
   if (base) {
     try {
-      const res = await fetch(`${base.replace(/\/$/, '')}/incidents`)
-      if (res.ok) return (await res.json()) as Incident[]
-    } catch {
-      /* fall through */
+      const payload = await fetchRemoteJson<Incident[] | { incidents?: Incident[]; results?: Incident[] }>(`/incidents`)
+      if (Array.isArray(payload)) return payload
+      if (Array.isArray(payload.incidents)) return payload.incidents
+      if (Array.isArray(payload.results)) return payload.results
+      throw remoteError('Unexpected incident payload shape from backend.')
+    } catch (error) {
+      throw error instanceof Error ? error : remoteError('Failed to load incidents from backend.')
     }
   }
+
   let list = loadLocal()
   if (!list.length) {
     list = [
@@ -82,17 +105,18 @@ export async function getIncident(id: string): Promise<Incident | null> {
 export async function saveIncident(inc: Incident): Promise<Incident> {
   const base = apiBase()
   if (base) {
-    try {
-      const res = await fetch(`${base.replace(/\/$/, '')}/incidents/${encodeURIComponent(inc.id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inc),
-      })
-      if (res.ok) return (await res.json()) as Incident
-    } catch {
-      /* fall through */
+    const url = `${base.replace(/\/$/, '')}/incidents/${encodeURIComponent(inc.id)}`
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inc),
+    })
+    if (!res.ok) {
+      throw remoteError(`Backend save failed (${res.status}) for incident ${inc.id}`)
     }
+    return (await res.json()) as Incident
   }
+
   const list = loadLocal()
   const idx = list.findIndex((i) => i.id === inc.id)
   if (idx >= 0) list[idx] = inc
