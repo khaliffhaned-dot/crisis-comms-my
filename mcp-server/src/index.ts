@@ -1,8 +1,6 @@
-import { McpServer } from '@modelcontextprotocol/server'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { createMcpHandler } from 'agents/mcp/server'
 import { z } from 'zod'
-import type { Env } from './env'
-import { handleIncidentApi } from './incidentApi'
 
 const SEVERITY = {
   1: {
@@ -107,23 +105,27 @@ const jsonResult = (value: unknown) => ({
 function createServer() {
   const server = new McpServer({ name: 'escalate-my', version: '1.0.0' })
 
-  server.tool(
+  server.registerTool(
     'list_severity_levels',
-    'List Escalate MY L1–L4 severity levels. This is a triage aid, not a legal or incident command decision.',
-    {},
+    {
+      description: 'List Escalate MY L1–L4 severity levels. This is a triage aid, not a legal or incident command decision.',
+      inputSchema: {},
+    },
     async () => jsonResult({ levels: SEVERITY, advisoryOnly: true }),
   )
 
-  server.tool(
+  server.registerTool(
     'recommend_severity',
-    'Provide a conservative preliminary triage suggestion from incident indicators. Unknown or incomplete information does not imply a routine incident; a human incident lead must decide.',
     {
-      facts: z.string().trim().min(1).max(2000).describe('Brief incident facts; avoid personal or sensitive data unless necessary.'),
-      safetyImpact: z.enum(['unknown', 'none', 'minor', 'serious', 'critical']),
-      operationalImpact: z.enum(['unknown', 'none', 'minor', 'serious', 'critical']),
-      mediaAttention: z.enum(['unknown', 'none', 'rising', 'widespread']),
-      possibleMaterialInfo: z.enum(['unknown', 'no', 'possible', 'yes']),
-      regulatoryInvolved: z.enum(['unknown', 'no', 'likely', 'yes']),
+      description: 'Provide a conservative preliminary triage suggestion from incident indicators. Unknown or incomplete information does not imply a routine incident; a human incident lead must decide.',
+      inputSchema: {
+        facts: z.string().trim().min(1).max(2000).describe('Brief incident facts; avoid personal or sensitive data unless necessary.'),
+        safetyImpact: z.enum(['unknown', 'none', 'minor', 'serious', 'critical']),
+        operationalImpact: z.enum(['unknown', 'none', 'minor', 'serious', 'critical']),
+        mediaAttention: z.enum(['unknown', 'none', 'rising', 'widespread']),
+        possibleMaterialInfo: z.enum(['unknown', 'no', 'possible', 'yes']),
+        regulatoryInvolved: z.enum(['unknown', 'no', 'likely', 'yes']),
+      },
     },
     async ({ facts, safetyImpact, operationalImpact, mediaAttention, possibleMaterialInfo, regulatoryInvolved }) => {
       const unknownIndicators = Object.entries({ safetyImpact, operationalImpact, mediaAttention, possibleMaterialInfo, regulatoryInvolved })
@@ -171,10 +173,12 @@ function createServer() {
     },
   )
 
-  server.tool(
+  server.registerTool(
     'list_regulatory_clocks',
-    'List indicative Malaysian regulatory reporting prompts. Deadlines and applicability are not verified; confirm current requirements with qualified counsel or the relevant authority.',
-    {},
+    {
+      description: 'List indicative Malaysian regulatory reporting prompts. Deadlines and applicability are not verified; confirm current requirements with qualified counsel or the relevant authority.',
+      inputSchema: {},
+    },
     async () => jsonResult({
       clocks: CLOCKS,
       advisoryOnly: true,
@@ -182,20 +186,24 @@ function createServer() {
     }),
   )
 
-  server.tool(
+  server.registerTool(
     'first_60_checklist',
-    'Return the Escalate MY first-60-minutes checklist; adapt to safety needs and incident facts.',
-    {},
+    {
+      description: 'Return the Escalate MY first-60-minutes checklist; adapt to safety needs and incident facts.',
+      inputSchema: {},
+    },
     async () => jsonResult({ checklist: FIRST_60, advisoryOnly: true }),
   )
 
-  server.tool(
+  server.registerTool(
     'draft_holding_outline',
-    'Return an unapproved holding-statement template. Verify every statement and obtain required clearance before publication.',
     {
-      scenario: z.enum(['operational', 'market', 'community', 'internal', 'cyber', 'governance']),
-      companyName: z.string().trim().min(1).max(120).refine((value) => !/[\\r\\n\\p{Cc}]/u.test(value), 'Company name must not contain line breaks or control characters').default('Company Name'),
-      lang: z.enum(['en', 'bm', 'both']).default('both'),
+      description: 'Return an unapproved holding-statement template. Verify every statement and obtain required clearance before publication.',
+      inputSchema: {
+        scenario: z.enum(['operational', 'market', 'community', 'internal', 'cyber', 'governance']),
+        companyName: z.string().trim().min(1).max(120).refine((value) => !/[\r\n\p{Cc}]/u.test(value), 'Company name must not contain line breaks or control characters').default('Company Name'),
+        lang: z.enum(['en', 'bm', 'both']).default('both'),
+      },
     },
     async ({ scenario, companyName, lang }) => {
       const outlines: Record<string, { en: string; bm: string }> = {
@@ -242,19 +250,25 @@ function createServer() {
     },
   )
 
-  server.tool('product_status', 'Escalate MY product status and architecture notes.', {}, async () => ({
-    content: [{
-      type: 'text' as const,
-      text: [
-        'Escalate MY — crisis communications for Bursa-listed PLCs',
-        'Live: https://escalate-my.pages.dev/',
-        'Repo: https://github.com/khaliffhaned-dot/crisis-comms-my',
-        'Modules: Command, Severity, First 60, Clocks, Statements, Log, Core Five, Manual',
-        'War room DO: worker/src/index.ts (IncidentRoom) — deploy with Wrangler from repo root',
-        'This MCP provides playbook tools; incident CRUD is available separately on the authenticated HTTP API.',
-      ].join('\n'),
-    }],
-  }))
+  server.registerTool(
+    'product_status',
+    {
+      description: 'Escalate MY product status and architecture notes.',
+      inputSchema: {},
+    },
+    async () => ({
+      content: [{
+        type: 'text' as const,
+        text: [
+          'Escalate MY — Crisis Intelligence Platform for Malaysian Organisations',
+          'Live: https://escalate-my.pages.dev/',
+          'Repo: https://github.com/khaliffhaned-dot/crisis-comms-my',
+          'Modules: Command Centre, Severity, First 60, Regulatory Clocks, Holding Statements, Decision Quorum, BoardBrief, Audit',
+          'This MCP provides advisory playbook tools only.',
+        ].join('\n'),
+      }],
+    }),
+  )
 
   return server
 }
@@ -262,16 +276,8 @@ function createServer() {
 const mcpHandler = createMcpHandler(createServer)
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: unknown, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
-
-    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
-      try {
-        return await handleIncidentApi(request, env)
-      } catch {
-        return Response.json({ error: 'Internal server error.' }, { status: 500, headers: { 'Cache-Control': 'no-store' } })
-      }
-    }
 
     if (url.pathname === '/mcp' || url.pathname === '/') {
       return mcpHandler(request, env, ctx)
