@@ -135,7 +135,7 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
 
       <section id="features" className="features-section">
         <h2 className="section-title">{t('Platform Modules', 'Modul Platform')}</h2>
-        <div className="features-grid features-grid--4">
+        <div className="features-grid features-grid--bento">
           <article className="feature-card">
             <div className="feature-icon">◆</div>
             <h3>{t('Command Centre™', 'Pusat Perintah™')}</h3>
