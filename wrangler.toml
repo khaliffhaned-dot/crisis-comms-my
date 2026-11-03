@@ -26,6 +26,17 @@ persist = true
 
 [observability.issue_detection]
 enabled = true
+
+# ...
+[[d1_databases]]
+binding = "DB"
+database_id = "5967539e-1748-4da6-9808-8f5084360d67"
+
+[[r2_buckets]]
+binding = "REPORTS"
+bucket_name = "escalate-reports"
+# ...
+
 # ...
 # Optional: serve SPA assets from same Worker later
 # [assets]
