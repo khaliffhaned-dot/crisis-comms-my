@@ -7,6 +7,7 @@ import CommandCentre from './core/CommandCentre'
 import QuorumModule from './core/QuorumModule'
 import AuditModule from './core/AuditModule'
 import DirectoryModule from './core/DirectoryModule'
+import { DecisionIntelligence, RegulatoryIntelligence, BoardIntelligence } from './core/IntelligenceModules'
 import { CORE_MODULES, type CoreSection } from './core/moduleConfig'
 import {
   listIncidents,
@@ -180,12 +181,17 @@ export default function CoreShell() {
         <nav className="sidebar__nav">
           <div className="nav-pillar">
             {CORE_MODULES.filter((m) => m.group === 'core').map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className={`nav-item ${section === m.id ? 'active-parent' : ''}`}
-                onClick={() => setSection(m.id)}
-              >
+              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
+                <span className="nav-item__content">
+                  <span className="nav-item__icon">{m.icon}</span>
+                  <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="nav-pillar">
+            {CORE_MODULES.filter((m) => m.group === 'intel').map((m) => (
+              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
                 <span className="nav-item__content">
                   <span className="nav-item__icon">{m.icon}</span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
@@ -195,12 +201,7 @@ export default function CoreShell() {
           </div>
           <div className="nav-pillar">
             {CORE_MODULES.filter((m) => m.group === 'ref').map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className={`nav-item ${section === m.id ? 'active-parent' : ''}`}
-                onClick={() => setSection(m.id)}
-              >
+              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
                 <span className="nav-item__content">
                   <span className="nav-item__icon">{m.icon}</span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
@@ -210,7 +211,7 @@ export default function CoreShell() {
           </div>
         </nav>
         <div className="sidebar__footer">
-          Escalate MY · Core
+          Escalate MY · Intelligence
           <br />
           <span className={`backend-pill ${backend}`}>{backend}</span>
         </div>
@@ -226,12 +227,8 @@ export default function CoreShell() {
               </span>
             )}
             <div className="lang-toggle">
-              <button type="button" className={lang === 'bm' ? 'active' : ''} onClick={() => setLang('bm')}>
-                BM
-              </button>
-              <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>
-                EN
-              </button>
+              <button type="button" className={lang === 'bm' ? 'active' : ''} onClick={() => setLang('bm')}>BM</button>
+              <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>EN</button>
             </div>
           </div>
         </header>
@@ -245,15 +242,18 @@ export default function CoreShell() {
               incidents={incidents}
               activeId={activeId}
               backend={backend}
-              onOpen={(id) => {
-                setActiveId(id)
-                setSection('incident')
-              }}
+              onOpen={(id) => { setActiveId(id); setSection('incident') }}
               onCreate={onCreate}
               onGo={(s) => setSection(s as CoreSection)}
               onApplySeverity={(level) => setSeverity(level)}
             />
           )}
+
+          {!loading && section === 'decision-intel' && (
+            <DecisionIntelligence lang={lang} incident={active} onApplySeverity={(level) => setSeverity(level)} />
+          )}
+          {!loading && section === 'regulatory-intel' && <RegulatoryIntelligence lang={lang} />}
+          {!loading && section === 'board-intel' && <BoardIntelligence lang={lang} incident={active} />}
 
           {!loading && section === 'manual' && (
             <Manual lang={lang} onBackToPlaybook={() => setSection('command')} />
@@ -262,36 +262,20 @@ export default function CoreShell() {
           {!loading && active && section === 'incident' && (
             <section className="card module-card">
               <div className="module-card__head">
-                <h2>
-                  <span className="step">◆</span>
-                  {t('Incident Management', 'Pengurusan Insiden')}
-                </h2>
+                <h2><span className="step">◆</span> {t('Incident Management', 'Pengurusan Insiden')}</h2>
                 <span className="module-card__badge">{active.status}</span>
               </div>
               <div className="form-row">
                 <label>{t('Title', 'Tajuk')}</label>
-                <input
-                  value={active.title}
-                  onChange={(e) => patchActive((inc) => ({ ...inc, title: e.target.value }))}
-                />
+                <input value={active.title} onChange={(e) => patchActive((inc) => ({ ...inc, title: e.target.value }))} />
               </div>
               <div className="form-row">
                 <label>{t('Owner', 'Pemilik')}</label>
-                <input
-                  value={active.owner}
-                  onChange={(e) => patchActive((inc) => ({ ...inc, owner: e.target.value }))}
-                />
+                <input value={active.owner} onChange={(e) => patchActive((inc) => ({ ...inc, owner: e.target.value }))} />
               </div>
               <div className="form-row">
                 <label>{t('Status', 'Status')}</label>
-                <select
-                  value={active.status}
-                  onChange={(e) =>
-                    patchActive((inc) =>
-                      appendAudit({ ...inc, status: e.target.value as Incident['status'] }, 'Operator', `Status → ${e.target.value}`)
-                    )
-                  }
-                >
+                <select value={active.status} onChange={(e) => patchActive((inc) => appendAudit({ ...inc, status: e.target.value as Incident['status'] }, 'Operator', `Status → ${e.target.value}`))}>
                   <option value="open">open</option>
                   <option value="monitoring">monitoring</option>
                   <option value="contained">contained</option>
@@ -303,12 +287,7 @@ export default function CoreShell() {
                 {([1, 2, 3, 4] as const).map((level) => {
                   const d = SEVERITY_DATA[level]
                   return (
-                    <button
-                      key={level}
-                      type="button"
-                      className={`severity-btn level-${level} ${active.severity === level ? 'selected' : ''}`}
-                      onClick={() => setSeverity(level)}
-                    >
+                    <button key={level} type="button" className={`severity-btn level-${level} ${active.severity === level ? 'selected' : ''}`} onClick={() => setSeverity(level)}>
                       <span className="level">{t(`Level ${level}`, `Tahap ${level}`)}</span>
                       <span className="bm">{lang === 'bm' ? d.shortBm : d.shortEn}</span>
                     </button>
@@ -321,77 +300,47 @@ export default function CoreShell() {
           {!loading && active && section === 'first60' && (
             <First60Module lang={lang} t={t} checked={active.checked} onToggle={toggleCheck} />
           )}
-
           {!loading && active && section === 'clocks' && (
             <ClocksModule lang={lang} t={t} started={active.clocks} onToggle={toggleClock} />
           )}
-
           {!loading && active && section === 'quorum' && (
             <QuorumModule lang={lang} incident={active} onVote={onVote} />
           )}
-
           {!loading && active && section === 'statements' && (
             <section className="card module-card">
               <div className="module-card__head">
-                <h2>
-                  <span className="step">✎</span>
-                  {t('Holding Statement Builder', 'Pembina Kenyataan Awal')}
-                </h2>
+                <h2><span className="step">✎</span> {t('Holding Statement Builder', 'Pembina Kenyataan Awal')}</h2>
               </div>
               <div className="stmt-controls">
                 <div className="form-row">
                   <label>{t('Scenario', 'Senario')}</label>
-                  <select
-                    value={active.scenario}
-                    onChange={(e) => patchActive((inc) => ({ ...inc, scenario: e.target.value }))}
-                  >
-                    {SCENARIOS[lang].map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
+                  <select value={active.scenario} onChange={(e) => patchActive((inc) => ({ ...inc, scenario: e.target.value }))}>
+                    {SCENARIOS[lang].map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </div>
                 <div className="form-row">
                   <label>{t('Language', 'Bahasa')}</label>
-                  <select
-                    value={active.statementLang}
-                    onChange={(e) =>
-                      patchActive((inc) => ({ ...inc, statementLang: e.target.value as Lang }))
-                    }
-                  >
+                  <select value={active.statementLang} onChange={(e) => patchActive((inc) => ({ ...inc, statementLang: e.target.value as Lang }))}>
                     <option value="bm">BM</option>
                     <option value="en">EN</option>
                   </select>
                 </div>
               </div>
               <div className="btn-row">
-                <button type="button" className="btn btn-primary" onClick={generateStatement}>
-                  {t('Generate draft', 'Jana draf')}
-                </button>
+                <button type="button" className="btn btn-primary" onClick={generateStatement}>{t('Generate draft', 'Jana draf')}</button>
               </div>
               <div className="form-row" style={{ marginTop: '1rem' }}>
                 <label>{t('Draft', 'Draf')}</label>
-                <textarea
-                  rows={10}
-                  value={active.statement}
-                  onChange={(e) => patchActive((inc) => ({ ...inc, statement: e.target.value }))}
-                />
-                <p className="stmt-hint">
-                  {t(
-                    'Clear via Decision Quorum before release. Not legal advice.',
-                    'Lulus melalui Kuorum Keputusan sebelum keluaran. Bukan nasihat undang-undang.'
-                  )}
-                </p>
+                <textarea rows={10} value={active.statement} onChange={(e) => patchActive((inc) => ({ ...inc, statement: e.target.value }))} />
+                <p className="stmt-hint">{t('Clear via Decision Quorum before release. Not legal advice.', 'Lulus melalui Kuorum Keputusan sebelum keluaran. Bukan nasihat undang-undang.')}</p>
               </div>
             </section>
           )}
 
           {!loading && active && section === 'audit' && <AuditModule lang={lang} incident={active} />}
-
           {!loading && section === 'directory' && <DirectoryModule lang={lang} />}
 
-          {!loading && !active && section !== 'command' && section !== 'manual' && section !== 'directory' && (
+          {!loading && !active && !['command', 'manual', 'directory', 'regulatory-intel', 'decision-intel'].includes(section) && (
             <p className="core-muted">{t('Create or open an incident first.', 'Cipta atau buka insiden dahulu.')}</p>
           )}
         </div>
