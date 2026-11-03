@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "test": "wrangler deploy --dry-run",
+    "test:tools": "tsx --test test/*.test.ts",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
@@ -13,8 +14,10 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.0",
-    "@cloudflare/workers-types": "^4.0.0"
+    "wrangler": "^4.0.0"
   }
 }
