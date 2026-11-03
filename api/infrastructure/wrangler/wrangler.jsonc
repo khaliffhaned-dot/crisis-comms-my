@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "escalate-my-api",
+  "main": "../../apps/api/src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "escalate-my-db",
+      "database_id": "37ba487d-0637-4984-a207-e95af5309ed1",
+      "migrations_dir": "../migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CONFIG",
+      "id": "6749e8ddfa1b4720bb61894d4caec4af"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "REPORTS",
+      "bucket_name": "escalate-my-reports"
+    }
+  ],
+  "vars": {
+    "APP_NAME": "Escalate MY",
+    "API_VERSION": "v1"
+  }
+}
