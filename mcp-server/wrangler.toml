@@ -1,0 +1,9 @@
+name = "escalate-my-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Optional: bind to the war-room Worker later via service binding
+# [[services]]
+# binding = "WAR_ROOM"
+# service = "escalate-my-war-room"
