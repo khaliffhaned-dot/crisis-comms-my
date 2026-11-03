@@ -1,12 +1,1 @@
-{
-  "servers": {
-    "cloudflare": {
-      "type": "http",
-      "url": "https://mcp.cloudflare.com/mcp"
-    },
-    "escalate-my": {
-      "type": "http",
-      "url": "https://escalate-my-mcp.<your-subdomain>.workers.dev/mcp"
-    }
-  }
-}
+{"servers":{"cloudflare":{"type":"http","url":"https://mcp.cloudflare.com/mcp"},"escalate-my":{"type":"http","url":"https://escalate-my-mcp.<your-subdomain>.workers.dev/mcp"}}}

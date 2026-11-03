@@ -1,12 +1,10 @@
 {
-  "name": "escalate-my-mcp",
-  "private": true,
-  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "test": "wrangler deploy --dry-run",
     "test:tools": "tsx --test test/*.test.ts",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "agents": "^0.2.0",
