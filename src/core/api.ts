@@ -41,18 +41,15 @@ function normalizeIncident(value: unknown): Incident {
   if (typeof data.id !== 'string' || typeof data.title !== 'string') {
     throw remoteError('Incident response is missing an id or title.')
   }
-  // New API responses return the complete frontend model.
   if (Array.isArray(data.checked) && Array.isArray(data.audit) && typeof data.createdAt === 'string') {
     return data as unknown as Incident
   }
-  // Preserve compatibility with records created before the client payload migration.
   const severityText = typeof data.severity === 'string' ? data.severity : ''
   const severityNumber = Number(severityText.replace(/^L/i, ''))
   const status = data.status === 'CLOSED' || data.status === 'closed' ? 'closed' : 'open'
   return newIncident({
     id: data.id,
     title: data.title,
-    description: typeof data.description === 'string' ? data.description : undefined,
     severity: [1, 2, 3, 4].includes(severityNumber) ? (severityNumber as Incident['severity']) : null,
     status,
     createdAt: typeof data.created_at === 'string' ? data.created_at : undefined,
