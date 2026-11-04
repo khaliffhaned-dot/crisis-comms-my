@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { Env, IntelligenceAssessInput } from '@escalate-my/shared'
-import { AppError, nowIso } from '@escalate-my/shared'
+import { AppError, nowIso, resolveIdentity } from '@escalate-my/shared'
 import {
   IncidentService,
   incidentRepo,
@@ -32,6 +32,22 @@ app.get('/health', (c) =>
 )
 
 app.get('/api/v1/regulatory/clocks', (c) => c.json({ clocks: listRegulatoryClocks() }))
+
+/**
+ * Who the caller is, per Cloudflare Access — so the frontend can show a real
+ * name/avatar instead of a hardcoded "Operator" placeholder, and send it
+ * along as the `actor`/`respondent_name` on writes made while Access isn't
+ * enabled yet (once it is, the backend's own `resolveIdentity` wins
+ * regardless of what the client sends — see @escalate-my/shared/identity).
+ */
+app.get('/api/v1/me', async (c) => {
+  const identity = await resolveIdentity(c.executionCtx)
+  return c.json({
+    actor: identity.actor,
+    email: identity.email,
+    verified: identity.verified,
+  })
+})
 
 /** Regulatory Intelligence™ — match facts to obligation catalog */
 app.post('/api/v1/intelligence/obligations', async (c) => {
@@ -83,10 +99,11 @@ app.post('/api/v1/incidents/:id/clocks/:clockId/toggle', async (c) => {
   } else {
     await stopObligationTracking(c.env.DB, incidentId, obligationId)
   }
+  const identity = await resolveIdentity(c.executionCtx)
   await repo.writeAudit({
     organisation_id: incident.organisation_id,
     incident_id: incidentId,
-    actor: body.actor || 'Operator',
+    actor: identity.actor || body.actor || 'Operator',
     action: body.active ? 'regulatory_clock_started' : 'regulatory_clock_stopped',
     detail: clockId,
   })
@@ -118,15 +135,19 @@ app.put('/api/v1/incidents/:id/quorum/:role', async (c) => {
   }
   const repo = incidentRepo(c.env)
   const incident = await repo.get(incidentId)
+  const identity = await resolveIdentity(c.executionCtx)
+  // A verified Access identity overrides the client-supplied respondent name —
+  // otherwise anyone could cast a quorum vote under someone else's name.
+  const respondentName = identity.actor || body.respondent_name
   await repo.upsertQuorumVote(incidentId, role, {
     state: body.state as any,
     note: body.note,
-    respondent_name: body.respondent_name,
+    respondent_name: respondentName,
   })
   await repo.writeAudit({
     organisation_id: incident.organisation_id,
     incident_id: incidentId,
-    actor: body.actor || body.respondent_name || role,
+    actor: identity.actor || body.actor || body.respondent_name || role,
     action: 'quorum_vote',
     detail: `${role}: ${body.state}`,
   })
@@ -186,14 +207,16 @@ app.post('/api/v1/incidents', async (c) => {
   }>()
   if (!body.organisation_id || !body.title) return c.json({ error: 'organisation_id and title required' }, 400)
   const svc = new IncidentService(c.env)
-  const item = await svc.create(body)
+  const identity = await resolveIdentity(c.executionCtx)
+  const item = await svc.create({ ...body, actor: identity.actor || body.actor })
   return c.json({ item }, 201)
 })
 
 app.post('/api/v1/incidents/:id/close', async (c) => {
   const body = await c.req.json<{ actor?: string }>().catch(() => ({}) as { actor?: string })
   const svc = new IncidentService(c.env)
-  const item = await svc.close(c.req.param('id'), body.actor)
+  const identity = await resolveIdentity(c.executionCtx)
+  const item = await svc.close(c.req.param('id'), identity.actor || body.actor)
   return c.json({ item })
 })
 
@@ -227,10 +250,11 @@ app.patch('/api/v1/incidents/:id', async (c) => {
     statement: body.statement,
     statement_lang: body.statement_lang,
   })
+  const identity = await resolveIdentity(c.executionCtx)
   await repo.writeAudit({
     organisation_id: before.organisation_id,
     incident_id: incidentId,
-    actor: body.actor || 'Operator',
+    actor: identity.actor || body.actor || 'Operator',
     action: 'incident.updated',
     detail: Object.keys(body)
       .filter((k) => k !== 'actor')
@@ -295,10 +319,11 @@ app.patch('/api/v1/incidents/:id/tasks/:taskId', async (c) => {
   const repo = incidentRepo(c.env)
   const incident = await repo.get(incidentId)
   const task = await repo.updateTaskStatus(taskId, body.status as any)
+  const identity = await resolveIdentity(c.executionCtx)
   await repo.writeAudit({
     organisation_id: incident.organisation_id,
     incident_id: incidentId,
-    actor: body.actor || 'Operator',
+    actor: identity.actor || body.actor || 'Operator',
     action: 'first60_task_updated',
     detail: `Langkah ${task.step_index}: "${task.title}" -> ${body.status}`,
   })
@@ -329,7 +354,8 @@ app.post('/api/v1/reports/board-brief', async (c) => {
   const svc = new IncidentService(c.env)
   const incident = await svc.get(body.incident_id)
   const kind = (body.kind as any) || 'situation_report'
-  const result = await generateAndStoreBrief(c.env, incident, kind, body.actor)
+  const identity = await resolveIdentity(c.executionCtx)
+  const result = await generateAndStoreBrief(c.env, incident, kind, identity.actor || body.actor)
   return c.json(result, 201)
 })
 

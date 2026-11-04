@@ -73,3 +73,10 @@ export type BriefKind =
   | 'ceo_brief'
   | 'chairman_brief'
   | 'post_incident_review'
+
+/** Who the backend resolved the caller to be, per Cloudflare Access (GET /api/v1/me). */
+export interface Identity {
+  actor: string | null
+  email: string | null
+  verified: boolean
+}

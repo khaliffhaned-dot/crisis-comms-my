@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { updateTaskStatus } from '@/lib/api'
 import { relativeTime } from '@/lib/format'
 import { UI_CLOCKS } from '@/lib/uiClocks'
+import { useCurrentActor } from '@/lib/useIdentity'
 import { useIncident } from '@/lib/useIncident'
 
 /**
@@ -23,6 +24,7 @@ import { useIncident } from '@/lib/useIncident'
 export function IncidentDetails({ onActiveIncident }: { onActiveIncident: (id: string | null) => void }) {
   const { id } = useParams<{ id: string }>()
   const { loading, error, payload, refresh } = useIncident(id)
+  const actor = useCurrentActor()
 
   useEffect(() => {
     onActiveIncident(payload?.incident.id ?? id ?? null)
@@ -45,7 +47,7 @@ export function IncidentDetails({ onActiveIncident }: { onActiveIncident: (id: s
 
   async function handleToggle(item: ChecklistItem) {
     const next = item.status === 'done' ? 'pending' : 'done'
-    await updateTaskStatus(incident.id, item.id, next)
+    await updateTaskStatus(incident.id, item.id, next, actor)
     refresh()
   }
 
