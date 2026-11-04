@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+import { ActionBanner } from '@/components/ActionBanner'
 import { ChecklistProgress, type ChecklistItem } from '@/components/ChecklistProgress'
 import { IncidentTimeline } from '@/components/IncidentTimeline'
 import { QuorumCard } from '@/components/QuorumCard'
@@ -61,6 +62,8 @@ export function IncidentDetails({ onActiveIncident }: { onActiveIncident: (id: s
           {incident.status}
         </Badge>
       </div>
+
+      <ActionBanner quorum={quorum} tasks={tasks} />
 
       <Card>
         <CardHeader>
