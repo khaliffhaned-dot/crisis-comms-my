@@ -69,6 +69,11 @@ const STATEMENTS: Record<string, { en: string; bm: string }> = {
 export default function CoreShell() {
   const [lang, setLang] = useState<Lang>('bm')
   const [mode, setMode] = useState<'landing' | 'app'>('landing')
+
+  useEffect(() => {
+    document.documentElement.lang = lang === 'bm' ? 'ms' : 'en'
+  }, [lang])
+
   const [section, setSection] = useState<CoreSection>('command')
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
