@@ -5,7 +5,7 @@ import {
   type SeverityInput,
 } from '@escalate-my/shared'
 import { first60Checklist } from './first60'
-import { createHoldingStatement } from './holding'
+import { draftHoldingStatement, type DraftHoldingStatementInput } from './holding'
 import { incidentRepo } from './repository'
 
 export class IncidentService {
@@ -72,7 +72,7 @@ export class IncidentService {
     return this.repo().listTasks(incidentId)
   }
 
-  holding(opts: Parameters<typeof createHoldingStatement>[0]) {
-    return createHoldingStatement(opts)
+  holding(opts: DraftHoldingStatementInput) {
+    return draftHoldingStatement(this.env, opts)
   }
 }

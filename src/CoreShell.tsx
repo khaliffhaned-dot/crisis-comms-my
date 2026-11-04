@@ -15,6 +15,8 @@ import {
   createIncident,
   appendAudit,
   backendMode,
+  generateHoldingStatement,
+  type HoldingStatementResult,
 } from './core/api'
 import type { Incident, Lang, QuorumState, Severity } from './core/types'
 import { SEVERITY_DATA } from './playbookData'
@@ -39,33 +41,6 @@ const SCENARIOS = {
   ],
 }
 
-const STATEMENTS: Record<string, { en: string; bm: string }> = {
-  operational: {
-    en: `[Company] is investigating reports concerning [issue]. We take safety seriously. Further statement when verified. Media: [Name] | [Tel]`,
-    bm: `[Syarikat] sedang menyiasat laporan mengenai [isu]. Kami mengambil berat keselamatan. Kenyataan lanjut apabila disahkan. Media: [Nama] | [Tel]`,
-  },
-  market: {
-    en: `[Company] is aware of speculation regarding [issue]. We comply with Bursa Listing Requirements. Material information will be announced via official channels.`,
-    bm: `[Syarikat] sedar akan spekulasi mengenai [isu]. Kami mematuhi Peraturan Penyenaraian Bursa. Maklumat material akan diumumkan melalui saluran rasmi.`,
-  },
-  cyber: {
-    en: `[Company] is investigating a potential cybersecurity / data incident. Incident response is active. Updates when verified.`,
-    bm: `[Syarikat] sedang menyiasat kemungkinan insiden siber / data. Respons insiden aktif. Kemas kini apabila disahkan.`,
-  },
-  community: {
-    en: `[Company] takes community concerns regarding [issue] seriously. We are engaging representatives and authorities.`,
-    bm: `[Syarikat] mengambil berat kebimbangan komuniti mengenai [isu]. Kami berhubung dengan wakil dan pihak berkuasa.`,
-  },
-  internal: {
-    en: `Colleagues — Management is treating [issue] seriously. Refer only to official internal channels.`,
-    bm: `Rakan sekerja — Pengurusan sedang menangani [isu] dengan serius. Rujuk hanya saluran dalaman rasmi.`,
-  },
-  governance: {
-    en: `[Company] is aware of matters relating to [governance issue]. The Board is taking appropriate steps.`,
-    bm: `[Syarikat] sedar akan perkara berkaitan [isu tadbir urus]. Lembaga mengambil langkah sewajarnya.`,
-  },
-}
-
 export default function CoreShell() {
   const [lang, setLang] = useState<Lang>('en')
   const [mode, setMode] = useState<'landing' | 'app'>('landing')
@@ -78,6 +53,10 @@ export default function CoreShell() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [statementBusy, setStatementBusy] = useState(false)
+  const [statementMeta, setStatementMeta] = useState<Pick<HoldingStatementResult, 'disclaimer' | 'source'> | null>(
+    null
+  )
   const backend = backendMode()
   const t = useCallback((en: string, bm: string) => (lang === 'bm' ? bm : en), [lang])
 
@@ -145,11 +124,27 @@ export default function CoreShell() {
       ),
     }))
 
-  const generateStatement = () => {
-    if (!active) return
-    const tpl = STATEMENTS[active.scenario] || STATEMENTS.operational
-    const text = (active.statementLang === 'bm' ? tpl.bm : tpl.en).replace(/\[Company\]|\[Syarikat\]/g, 'Demo Holdings Bhd')
-    patchActive((inc) => appendAudit({ ...inc, statement: text }, 'Operator', 'Holding statement generated'))
+  const generateStatement = async () => {
+    if (!active || statementBusy) return
+    setStatementBusy(true)
+    try {
+      const result = await generateHoldingStatement({
+        scenario: active.scenario,
+        company: 'Demo Holdings Bhd',
+        issue: active.title,
+        lang: active.statementLang,
+      })
+      setStatementMeta({ disclaimer: result.disclaimer, source: result.source })
+      const text = (active.statementLang === 'bm' ? result.bm : result.en) || result.en || result.bm || ''
+      await patchActive((inc) => appendAudit({ ...inc, statement: text }, 'Operator', 'Holding statement generated'))
+    } catch (err) {
+      setStatementMeta({
+        disclaimer: err instanceof Error ? err.message : 'Could not reach escalate-my-api.',
+        source: 'local',
+      })
+    } finally {
+      setStatementBusy(false)
+    }
   }
 
   if (mode === 'landing') {
@@ -332,12 +327,23 @@ export default function CoreShell() {
                 </div>
               </div>
               <div className="btn-row">
-                <button type="button" className="btn btn-primary" onClick={generateStatement}>{t('Generate draft', 'Jana draf')}</button>
+                <button type="button" className="btn btn-primary" onClick={generateStatement} disabled={statementBusy}>
+                  {statementBusy ? t('Generating…', 'Menjana…') : t('Generate draft', 'Jana draf')}
+                </button>
+                {statementMeta?.source === 'workers-ai' && (
+                  <span className="stmt-source-badge">{t('AI-drafted', 'Draf AI')}</span>
+                )}
               </div>
               <div className="form-row" style={{ marginTop: '1rem' }}>
                 <label>{t('Draft', 'Draf')}</label>
                 <textarea rows={10} value={active.statement} onChange={(e) => patchActive((inc) => ({ ...inc, statement: e.target.value }))} />
-                <p className="stmt-hint">{t('Clear via Decision Quorum before release. Not legal advice.', 'Lulus melalui Kuorum Keputusan sebelum keluaran. Bukan nasihat undang-undang.')}</p>
+                <p className="stmt-hint">
+                  {statementMeta?.disclaimer ||
+                    t(
+                      'Clear via Decision Quorum before release. Not legal advice.',
+                      'Lulus melalui Kuorum Keputusan sebelum keluaran. Bukan nasihat undang-undang.'
+                    )}
+                </p>
               </div>
             </section>
           )}

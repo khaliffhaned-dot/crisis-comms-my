@@ -73,3 +73,91 @@ export function createHoldingStatement(opts: {
   if (opts.lang === 'bm') return { bm: fill(tpl.bm), disclaimer }
   return { en: fill(tpl.en), bm: fill(tpl.bm), disclaimer }
 }
+
+export interface DraftHoldingStatementInput {
+  scenario: string
+  company: string
+  issue: string
+  lang: 'en' | 'bm' | 'both'
+  /** Extra situational detail beyond the one-line `issue`, when available —
+   * sharpens the AI draft. Optional; the template path never uses it. */
+  facts?: string
+}
+
+export interface DraftHoldingStatementResult {
+  en?: string
+  bm?: string
+  disclaimer: string
+  source: 'template' | 'workers-ai'
+}
+
+const AI_DISCLAIMER =
+  'AI-drafted suggestion only — not legal advice and not fact-checked. Legal/Company Secretary review and Decision Quorum clearance required before release.'
+
+/**
+ * AI-assisted drafting, layered on top of the deterministic template —
+ * never replacing it as the fallback. Severity/regulatory classification
+ * (decisionIntelligence.ts) stays rules-only on purpose: that's
+ * compliance-sensitive domain knowledge (Bursa deadlines, PDPA windows) an
+ * LLM should never originate. A holding statement's cautious, non-committal
+ * register is exactly what a model is good at and safe for, especially
+ * with a hard disclaimer and mandatory Quorum clearance already built into
+ * the product regardless of source.
+ *
+ * Degrades to `createHoldingStatement` (the template) whenever `env.AI` is
+ * unconfigured, the model call throws, or its output can't be parsed —
+ * same graceful-fallback shape as every other AI/Access-gated path in this
+ * API. Never throws itself.
+ */
+export async function draftHoldingStatement(
+  env: { AI?: Ai },
+  opts: DraftHoldingStatementInput
+): Promise<DraftHoldingStatementResult> {
+  if (!env.AI) return { ...createHoldingStatement(opts), source: 'template' }
+
+  try {
+    const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You draft cautious corporate holding statements for a Malaysian crisis-response tool. ' +
+            'Rules: 2-3 sentences per language. Never admit fault or liability. Never invent facts beyond ' +
+            'what is given. Never state a regulatory conclusion or deadline. Promise a follow-up once facts ' +
+            'are verified. Match the register of an official corporate statement, not marketing copy. ' +
+            'Output EXACTLY this format and nothing else:\nEN: <english statement>\nBM: <Bahasa Malaysia statement>',
+        },
+        {
+          role: 'user',
+          content: [
+            `Company: ${opts.company}`,
+            `Scenario type: ${opts.scenario}`,
+            `Issue (one line): ${opts.issue}`,
+            opts.facts ? `Additional facts: ${opts.facts}` : null,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        },
+      ],
+    })
+
+    const text = typeof result === 'string' ? result : (result as { response?: string } | null)?.response
+    const parsed = text ? parseEnBm(text) : null
+    if (!parsed?.en && !parsed?.bm) return { ...createHoldingStatement(opts), source: 'template' }
+
+    const out: DraftHoldingStatementResult = { disclaimer: AI_DISCLAIMER, source: 'workers-ai' }
+    if (opts.lang !== 'bm') out.en = parsed.en
+    if (opts.lang !== 'en') out.bm = parsed.bm
+    if (!out.en && !out.bm) return { ...createHoldingStatement(opts), source: 'template' }
+    return out
+  } catch {
+    // Model error, timeout, quota, malformed output — never block the feature on this.
+    return { ...createHoldingStatement(opts), source: 'template' }
+  }
+}
+
+function parseEnBm(text: string): { en?: string; bm?: string } {
+  const enMatch = text.match(/EN:\s*(.+?)(?:\n\s*BM:|$)/is)
+  const bmMatch = text.match(/BM:\s*(.+)$/is)
+  return { en: enMatch?.[1]?.trim(), bm: bmMatch?.[1]?.trim() }
+}
