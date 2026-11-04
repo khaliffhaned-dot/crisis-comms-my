@@ -119,6 +119,12 @@ export interface Env {
    * fallback (rules engine / template) when this binding isn't configured,
    * same pattern as everywhere else in this API. */
   AI?: Ai
+  /** AI Gateway id routed through env.AI.run()'s third argument, for request
+   * logging/analytics/caching on Workers AI calls. Optional — unset means
+   * calls go straight to the model, same as before AI Gateway was wired up.
+   * "default" auto-creates a gateway on first authenticated request, so no
+   * account-side setup is required to use it. */
+  AI_GATEWAY_ID?: string
   APP_NAME: string
   API_VERSION: string
 }

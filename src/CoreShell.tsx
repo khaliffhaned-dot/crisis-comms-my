@@ -17,6 +17,8 @@ import {
   backendMode,
   generateHoldingStatement,
   generateApprovedResponse,
+  getOrganisationSettings,
+  saveOrganisationSettings,
   type HoldingStatementResult,
   type ApprovedResponseResult,
 } from './core/api'
@@ -111,6 +113,8 @@ export default function CoreShell() {
   const [responseType, setResponseType] = useState('holding')
   const [approvedBusy, setApprovedBusy] = useState(false)
   const [approvedResult, setApprovedResult] = useState<ApprovedResponseResult | null>(null)
+  const [orgSettingsSaving, setOrgSettingsSaving] = useState(false)
+  const [orgSettingsSavedAt, setOrgSettingsSavedAt] = useState<number | null>(null)
   const backend = backendMode()
   const t = useCallback((en: string, bm: string) => (lang === 'bm' ? bm : en), [lang])
 
@@ -122,7 +126,28 @@ export default function CoreShell() {
       if (list[0]) setActiveId(list[0].id)
       setLoading(false)
     })
+    // Replaces the previous hardcoded "Demo Holdings Bhd" default with the
+    // organisation's real saved name (CONFIG KV via orgSettings.ts), if any
+    // has been set. Best-effort: a fetch failure just leaves the existing
+    // placeholder default in place rather than blocking the page.
+    getOrganisationSettings()
+      .then((settings) => setOrgName(settings.name))
+      .catch(() => {})
   }, [])
+
+  const saveOrgName = async () => {
+    if (orgSettingsSaving) return
+    setOrgSettingsSaving(true)
+    try {
+      await saveOrganisationSettings({ name: orgName })
+      setOrgSettingsSavedAt(Date.now())
+    } catch {
+      // Best-effort — e.g. local demo mode with no backend, or RBAC denying
+      // a non-Admin. Silent: there's nothing actionable to show mid-draft.
+    } finally {
+      setOrgSettingsSaving(false)
+    }
+  }
 
   const persist = async (inc: Incident) => {
     const saved = await saveIncident(inc)
@@ -398,7 +423,15 @@ export default function CoreShell() {
               <div className="stmt-controls">
                 <div className="form-row">
                   <label>{t('Organisation name', 'Nama organisasi')}</label>
-                  <input value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+                  <input value={orgName} onChange={(e) => { setOrgName(e.target.value); setOrgSettingsSavedAt(null) }} />
+                  {backend === 'api' && (
+                    <div className="btn-row" style={{ marginTop: '0.4rem' }}>
+                      <button type="button" className="btn btn-secondary" onClick={saveOrgName} disabled={orgSettingsSaving}>
+                        {orgSettingsSaving ? t('Saving…', 'Menyimpan…') : t('Save as organisation default', 'Simpan sebagai lalai organisasi')}
+                      </button>
+                      {orgSettingsSavedAt && <span className="stmt-source-badge">{t('Saved', 'Disimpan')}</span>}
+                    </div>
+                  )}
                 </div>
                 <div className="form-row">
                   <label>{t('Scenario', 'Senario')}</label>
