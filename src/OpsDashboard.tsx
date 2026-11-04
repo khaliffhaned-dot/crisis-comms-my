@@ -90,6 +90,7 @@ export default function OpsDashboard({
   const total = Math.max(checked.length, 1)
   const done = checked.filter(Boolean).length
   const seed = useMemo(() => seedFromClient(client.id), [client.id])
+  const templates = useMemo(() => (lang === 'bm' ? TICKER_BM : TICKER_EN), [lang])
 
   const [now, setNow] = useState(() => new Date())
   const [metrics, setMetrics] = useState<LiveMetrics>(() => ({
@@ -110,7 +111,6 @@ export default function OpsDashboard({
 
   useEffect(() => {
     if (!liveOn) return
-    const templates = lang === 'bm' ? TICKER_BM : TICKER_EN
 
     const pushTick = () => {
       const tpl = templates[Math.floor(Math.random() * templates.length)]
@@ -149,7 +149,7 @@ export default function OpsDashboard({
 
     const id = window.setInterval(pushTick, 4500 + (seed % 1500))
     return () => window.clearInterval(id)
-  }, [liveOn, lang, severity, client.id, seed])
+  }, [liveOn, lang, severity, client.id, seed, templates])
 
   useEffect(() => {
     if (!severity) return
@@ -251,7 +251,7 @@ export default function OpsDashboard({
             <li><span className="ops-step-num">4</span>{t('Keep the decision log current', 'Pastikan log keputusan terkini')}</li>
           </ul>
           <div className="ops-statement-chip">
-            {statement ? t('Holding draft ready', 'Draf kenyataan sedia') : t(`Scenario: ${scenarios[lang].find((s) => s.id === scenario)?.label}`, `Senario: ${scenarios[lang].find((s) => s.id === scenario)?.label}`)}
+            {statement ? t('Holding draft ready', 'Draf kenyataan sedia') : t(`Scenario: ${scenarios[lang].find((s) => s.id === scenario)?.label}`, `Senario: ${scenarios[lang].find((s) => s.id == scenario)?.label}`)}
           </div>
         </div>
 
@@ -294,3 +294,4 @@ export default function OpsDashboard({
     </div>
   )
 }
+

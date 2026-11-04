@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { FIRST_60_STEPS } from './playbookData'
 
 type Lang = 'bm' | 'en'
@@ -14,6 +15,7 @@ export default function First60Module({ lang, t, checked, onToggle }: Props) {
   const done = checked.filter(Boolean).length
   const total = steps.length
   const pct = Math.round((done / total) * 100)
+  const indexByStep = useMemo(() => new Map(steps.map((step, index) => [step.step, index])), [steps])
 
   const bands = ['0–10 min', '10–20 min', '20–40 min', '40–60 min'] as const
 
@@ -49,7 +51,7 @@ export default function First60Module({ lang, t, checked, onToggle }: Props) {
               <div className="timeline-band__label">{band}</div>
               <ul className="checklist checklist--rich">
                 {bandSteps.map((item) => {
-                  const idx = steps.findIndex((s) => s.step === item.step)
+                  const idx = indexByStep.get(item.step) ?? -1
                   return (
                     <li key={item.step} className={checked[idx] ? 'done' : ''}>
                       <label className="checklist-row">
@@ -82,3 +84,4 @@ export default function First60Module({ lang, t, checked, onToggle }: Props) {
     </section>
   )
 }
+

@@ -14,6 +14,13 @@ export interface ObligationRow {
   deadline_hours?: number | null
 }
 
+function normalizeHints(value: string): string[] {
+  return value
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean)
+}
+
 export function matchObligations(
   facts: string,
   rows: ObligationRow[],
@@ -21,10 +28,11 @@ export function matchObligations(
 ): MatchedObligation[] {
   const text = facts.toLowerCase()
   const scored: MatchedObligation[] = []
+  const normalizedById = new Map(rows.map((row) => [row.id, normalizeHints(row.trigger_hints)]))
 
   for (const row of rows) {
     if (!row.active) continue
-    const hints = row.trigger_hints.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+    const hints = normalizedById.get(row.id) ?? []
     let hits = 0
     for (const h of hints) {
       if (h && text.includes(h)) hits++
@@ -48,3 +56,4 @@ export function matchObligations(
 
   return scored.sort((a, b) => b.match_score - a.match_score)
 }
+

@@ -161,8 +161,6 @@ app.put('/api/v1/incidents/:id/quorum/:role', async (c) => {
   const repo = incidentRepo(c.env)
   const incident = await repo.get(incidentId)
   const identity = await resolveIdentity(c.executionCtx)
-  // A verified Access identity overrides the client-supplied respondent name —
-  // otherwise anyone could cast a quorum vote under someone else's name.
   const respondentName = identity.actor || body.respondent_name
   await repo.upsertQuorumVote(incidentId, role, {
     state: body.state as any,
@@ -214,7 +212,103 @@ app.get('/api/v1/incidents', async (c) => {
   if (!org) return c.json({ error: 'organisation_id required' }, 400)
   const svc = new IncidentService(c.env)
   const items = await svc.listActive(org)
-  return c.json({ items })
+  const full = c.req.query('full') === 'true'
+  if (!full) return c.json({ items })
+
+  const incidentIds = items.map((item) => item.id)
+  const detailRows = await Promise.all(
+    incidentIds.map(async (id) => {
+      const repo = incidentRepo(c.env)
+      const [incident, tasks, quorum, audit, obligationRows] = await Promise.all([
+        svc.get(id),
+        svc.tasks(id),
+        repo.listQuorum(id),
+        repo.listAudit(id),
+        c.env.DB.prepare(`SELECT obligation_id FROM incident_obligations WHERE incident_id = ?`)
+          .bind(id)
+          .all<{ obligation_id: string }>(),
+      ])
+      const clocks: Record<string, boolean> = {}
+      for (const row of obligationRows.results ?? []) {
+        const clockId = uiClockIdForObligation(row.obligation_id)
+        if (clockId) clocks[clockId] = true
+      }
+      return { ...incident, checked: incident.checked ?? Array(13).fill(false), tasks, quorum, audit, clocks }
+    })
+  )
+  return c.json({ items: detailRows })
+})
+
+app.post('/api/v1/incidents/:id/save', async (c) => {
+  const incidentId = c.req.param('id')
+  const body = await c.req.json<{
+    incident?: {
+      title?: string
+      status?: string
+      severity?: number | null
+      dimension?: string | null
+      scenario?: string
+      owner?: string | null
+      statement?: string
+      statement_lang?: string
+    }
+    tasks?: Array<{ taskId: string; status: string }>
+    quorum?: Array<{ role: string; state: string; note?: string | null; respondent_name?: string | null }>
+    clocks?: Record<string, boolean>
+    actor?: string
+  }>()
+  const repo = incidentRepo(c.env)
+  const identity = await resolveIdentity(c.executionCtx)
+  const actor = identity.actor || body.actor || 'Operator'
+
+  if (body.incident) {
+    await repo.update(incidentId, {
+      title: body.incident.title,
+      status: body.incident.status as any,
+      severity: body.incident.severity,
+      dimension: body.incident.dimension,
+      scenario: body.incident.scenario,
+      owner: body.incident.owner,
+      statement: body.incident.statement,
+      statement_lang: body.incident.statement_lang,
+    })
+    const before = await repo.get(incidentId)
+    await repo.writeAudit({
+      organisation_id: before.organisation_id,
+      incident_id: incidentId,
+      actor,
+      action: 'incident.updated',
+      detail: 'bulk-save',
+    })
+  }
+
+  if (body.tasks && body.tasks.length > 0) {
+    for (const task of body.tasks) {
+      await repo.updateTaskStatus(task.taskId, task.status as any)
+    }
+  }
+
+  if (body.quorum && body.quorum.length > 0) {
+    for (const vote of body.quorum) {
+      await repo.upsertQuorumVote(incidentId, vote.role, {
+        state: vote.state as any,
+        note: vote.note ?? null,
+        respondent_name: vote.respondent_name ?? null,
+      })
+    }
+  }
+
+  if (body.clocks) {
+    for (const [clockId, active] of Object.entries(body.clocks)) {
+      const obligationId = obligationIdForUiClock(clockId)
+      if (!obligationId) continue
+      if (active) await startObligationTracking(c.env.DB, incidentId, obligationId)
+      else await stopObligationTracking(c.env.DB, incidentId, obligationId)
+    }
+  }
+
+  c.executionCtx.waitUntil(broadcastIncidentUpdate(c.env, incidentId, 'incident_saved'))
+  return c.json({ ok: true, item: await repo.get(incidentId) })
 })
 
 app.get('/api/v1/incidents/:id', async (c) => {
@@ -328,11 +422,6 @@ app.get('/api/v1/incidents/:id/live', async (c) => {
   const stub = c.env.INCIDENT_ROOM.get(c.env.INCIDENT_ROOM.idFromName(incidentId))
   const url = new URL(c.req.url)
   url.searchParams.set('room', incidentId)
-  // A verified Access identity overrides whatever ?name= the client sent —
-  // otherwise presence is exactly as spoofable as the old actor fields were
-  // before resolveIdentity existed. Falls back to the client's own value
-  // when Access isn't enabled yet, same degrade-gracefully pattern as
-  // everywhere else.
   const identity = await resolveIdentity(c.executionCtx)
   if (identity.actor) url.searchParams.set('name', identity.actor)
   return stub.fetch(new Request(url, c.req.raw))
@@ -385,8 +474,6 @@ app.post('/api/v1/holding-statements', async (c) => {
     company: string
     issue: string
     lang?: 'en' | 'bm' | 'both'
-    /** Extra situational detail — sharpens the AI draft when the AI binding
-     * is configured; ignored by the deterministic template fallback. */
     facts?: string
   }>()
   const svc = new IncidentService(c.env)
@@ -484,3 +571,4 @@ export default {
     if (event.cron === FIRST60_ESCALATION_CRON) ctx.waitUntil(runFirst60EscalationCron(env))
   },
 }
+
