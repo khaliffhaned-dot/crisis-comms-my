@@ -15,17 +15,17 @@
 
 | Mode | When | Behaviour |
 |------|------|-----------|
-| `local` | default | `localStorage` key `escalate-my-core-v1` |
-| `api` | `VITE_API_BASE` set | `GET/PUT /incidents` |
-| `war-room` | `VITE_WAR_ROOM_WS` set | badge only; persist still local until DO maps full Incident |
+| `api` | default (real backend reachable) | the real `escalate-my-api` Worker + D1 |
+| `local` | `VITE_LOCAL_ONLY=true` | explicit offline/demo opt-out, `localStorage` key `escalate-my-core-v1` |
+
+Live collaboration (presence + "something changed" push) is a WebSocket on
+the same `escalate-my-api` Worker, not a separate mode — see `WAR-ROOM.md`.
 
 ### Connect your backend
 
 ```bash
 # Cloudflare Pages env
 VITE_API_BASE=https://your-api.workers.dev
-# optional realtime
-VITE_WAR_ROOM_WS=wss://escalate-my-war-room.<sub>.workers.dev
 ```
 
 Expected API:

@@ -1,103 +1,60 @@
-# Escalate MY — Durable Object war room
+# Escalate MY — live collaboration (IncidentRoom Durable Object)
 
-Shared real-time state for severity, First 60 checklist, regulatory clocks, decision log, and operator presence.
+> Superseded design, kept for history: this used to be a **separate**
+> Worker (`escalate-my-war-room`) with its own Durable Object holding an
+> independent copy of severity/checklist/clocks/log/statement — a second,
+> disconnected source of truth from D1. That worker, its `wrangler.worker.toml`,
+> and the client hook that spoke its protocol (`src/hooks/useWarRoom.ts`,
+> which was never actually wired into any screen) are gone. What's below
+> describes the current design.
+
+D1 (via `escalate-my-api`) is the **only** store for incident data —
+severity, tasks, quorum votes, regulatory clocks, the statement, the audit
+trail. `IncidentRoom` is a Durable Object **inside that same Worker** that
+holds nothing but who's currently connected to an incident ("presence")
+and relays a tiny "something changed, go refetch" push after every write —
+see `api/apps/api/src/incidentRoom.ts` for the full reasoning.
 
 ## Architecture
 
 ```
-Browser (Pages)  --WSS-->  Worker (escalate-my-war-room)
-                              |
-                              v
-                     IncidentRoom Durable Object
-                     (one instance per roomId = client id)
+Browser  --WSS-->  escalate-my-api Worker  --(same env binding)-->  IncidentRoom DO
+                          |                                          (one per incident id,
+                          v                                           presence + broadcast only)
+                         D1  <---- every mutation route writes here first,
+                                   then pokes the DO (fire-and-forget)
 ```
 
-## Deploy Worker (requires Workers Paid for production DO)
-
-```bash
-npm i -D wrangler
-npx wrangler login
-npx wrangler deploy
-```
-
-Note the URL, e.g. `https://escalate-my-war-room.<subdomain>.workers.dev`
-
-WebSocket endpoint:
+## WebSocket endpoint
 
 ```
-wss://escalate-my-war-room.<subdomain>.workers.dev/ws?room=demo-main&name=Crisis%20Lead
+wss://escalate-my-api.<subdomain>.workers.dev/api/v1/incidents/<incidentId>/live?name=<operator>
 ```
-
-## Wire the SPA
-
-1. In Cloudflare Pages project → Settings → Environment variables:
-
-   `VITE_WAR_ROOM_WS` = `wss://escalate-my-war-room.<subdomain>.workers.dev`
-
-   (Must rebuild after setting Vite env vars.)
-
-2. In `App.tsx` (or the live v1.2 shell):
-
-```tsx
-import { useWarRoom } from './hooks/useWarRoom'
-
-const warRoom = useWarRoom({
-  roomId: client.id, // e.g. demo-main
-  name: 'Crisis Lead',
-  wsBase: import.meta.env.VITE_WAR_ROOM_WS || '',
-  enabled: Boolean(import.meta.env.VITE_WAR_ROOM_WS),
-  onState: (s) => {
-    setSeverity(s.severity)
-    setChecked(s.checked)
-    setClocksStarted(s.clocks)
-    setLog(s.log)
-    setStatement(s.statement)
-    if (s.scenario) setScenario(s.scenario)
-  },
-})
-
-// When local actions happen, also push:
-handleSeverity = (level) => {
-  setSeverity(level)
-  warRoom.pushSeverity(level)
-}
-```
-
-3. Show presence chip: `{warRoom.presence.length} in war room` + `warRoom.connected`.
 
 ## Message protocol (JSON)
 
 **Client → server**
 
-| type | fields |
-|------|--------|
-| hello | name |
-| setSeverity | severity (1-4 \| null) |
-| toggleCheck | index, value? |
-| setChecked | checked[] |
-| toggleClock | id, value? |
-| addLog | text |
-| setStatement | statement, scenario? |
-| ping | |
+| type  | fields |
+|-------|--------|
+| hello | name   |
+| ping  |        |
 
 **Server → client**
 
-| type | fields |
-|------|--------|
-| state | full RoomState |
-| presence | presence[] |
-| pong | t |
-| error | message |
+| type             | fields                    |
+|------------------|----------------------------|
+| presence         | presence[] (id, name, joinedAt) |
+| incident_updated | incidentId, reason        |
+| pong             | t                          |
+| error            | message                    |
 
-## Test without UI
-
-```bash
-# Snapshot
-curl "https://escalate-my-war-room.<sub>.workers.dev/state?room=demo-main"
-```
-
-Open two browser tabs with the same `room` query — checklist and severity should sync.
+A client does **not** mutate incident data over this socket. On
+`incident_updated`, re-fetch `GET /api/v1/incidents/:id/full` (or just the
+piece that matters) the same way the app already does after its own
+writes — the push only tells you *when*, not *what*.
 
 ## Cost note
 
-Durable Objects require **Workers Paid** ($5/mo minimum). Hibernation keeps idle rooms cheap. Suitable for listed-company war rooms (few concurrent sockets per incident).
+Durable Objects require **Workers Paid** ($5/mo minimum). Hibernation
+keeps idle rooms cheap — one instance per incident, not per connection.

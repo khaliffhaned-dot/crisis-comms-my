@@ -73,3 +73,11 @@ export type BriefKind =
   | 'ceo_brief'
   | 'chairman_brief'
   | 'post_incident_review'
+
+/** One connected operator, from the IncidentRoom Durable Object's presence
+ * push (see WAR-ROOM.md) — not persisted anywhere, purely in-memory. */
+export interface PresenceEntry {
+  id: string
+  name: string
+  joinedAt: number
+}
