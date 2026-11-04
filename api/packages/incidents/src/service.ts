@@ -37,6 +37,7 @@ export class IncidentService {
       owner: input.owner,
       created_by: input.actor,
     })
+    await this.repo().seedFirst60Tasks(inc.id, inc.created_at)
     await this.repo().writeAudit({
       organisation_id: input.organisation_id,
       incident_id: inc.id,
@@ -65,6 +66,10 @@ export class IncidentService {
 
   first60() {
     return first60Checklist()
+  }
+
+  tasks(incidentId: string) {
+    return this.repo().listTasks(incidentId)
   }
 
   holding(opts: Parameters<typeof createHoldingStatement>[0]) {

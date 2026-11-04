@@ -2,7 +2,13 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { Env, IntelligenceAssessInput } from '@escalate-my/shared'
 import { AppError, nowIso } from '@escalate-my/shared'
-import { IncidentService, incidentRepo, assessIncidentRules } from '@escalate-my/incidents'
+import {
+  IncidentService,
+  incidentRepo,
+  assessIncidentRules,
+  findOverdueTasks,
+  escalateTask,
+} from '@escalate-my/incidents'
 import {
   listRegulatoryClocks,
   matchObligations,
@@ -142,6 +148,13 @@ app.get('/api/v1/first60', (c) => {
   return c.json({ steps: svc.first60() })
 })
 
+/** First Sixty Minutes™ — this incident's 13-step checklist, with computed due_at and escalation state */
+app.get('/api/v1/incidents/:id/tasks', async (c) => {
+  const svc = new IncidentService(c.env)
+  const items = await svc.tasks(c.req.param('id'))
+  return c.json({ items })
+})
+
 app.post('/api/v1/holding-statements', async (c) => {
   const body = await c.req.json<{
     scenario: string
@@ -179,7 +192,7 @@ app.onError((err, c) => {
 })
 
 /**
- * Regulatory Clock™ cron — runs every 15 minutes (see infrastructure/wrangler
+ * Regulatory Clock™ cron — runs every 30 minutes (see infrastructure/wrangler
  * wrangler.jsonc `triggers.crons`). Flags incident_obligations whose deadline
  * has arrived so a human sees it, instead of relying on someone remembering
  * to check a countdown. Never changes incident severity and never notifies
@@ -206,9 +219,40 @@ async function runRegulatoryClockCron(env: Env): Promise<{ escalated: number }> 
   return { escalated: overdue.length }
 }
 
+/**
+ * First Sixty Minutes™ cron — runs every 5 minutes, a much tighter cadence
+ * than the Regulatory Clock because this window is 60 minutes wide, not
+ * days. Flags tasks whose band deadline (e.g. "0–10 min" -> T0+10min)
+ * has passed and are still pending on an open incident. Same posture as
+ * the regulatory cron: flags for a human, never reassigns the task,
+ * never changes severity, never pages anyone outside the platform.
+ */
+async function runFirst60EscalationCron(env: Env): Promise<{ escalated: number }> {
+  const now = nowIso()
+  const overdue = await findOverdueTasks(env.DB, now)
+  if (overdue.length === 0) return { escalated: 0 }
+
+  const repo = incidentRepo(env)
+  for (const row of overdue) {
+    await escalateTask(env.DB, row.task_id, now)
+    await repo.writeAudit({
+      organisation_id: row.organisation_id,
+      incident_id: row.incident_id,
+      actor: 'Sistem',
+      action: 'first60_task_overdue',
+      detail: `Langkah ${row.step_index} (${row.due_band}): "${row.title}" (${row.owner ?? 'pemilik belum ditetapkan'}) belum selesai selepas tempoh ditetapkan.`,
+    })
+  }
+  return { escalated: overdue.length }
+}
+
+const REGULATORY_CLOCK_CRON = '*/30 * * * *'
+const FIRST60_ESCALATION_CRON = '*/5 * * * *'
+
 export default {
   fetch: app.fetch,
-  scheduled: async (_event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
-    ctx.waitUntil(runRegulatoryClockCron(env))
+  scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
+    if (event.cron === REGULATORY_CLOCK_CRON) ctx.waitUntil(runRegulatoryClockCron(env))
+    if (event.cron === FIRST60_ESCALATION_CRON) ctx.waitUntil(runFirst60EscalationCron(env))
   },
 }

@@ -29,7 +29,7 @@
     "API_VERSION": "v1"
   },
   "triggers": {
-    "crons": ["*/30 * * * *"]
+    "crons": ["*/30 * * * *", "*/5 * * * *"]
   },
   "observability": {
     "enabled": false,
@@ -46,7 +46,7 @@
       "head_sampling_rate": 1,
       "persist": true
     },
-    "issue_detection": {
+    "issues": {
       "enabled": true
     }
   }
