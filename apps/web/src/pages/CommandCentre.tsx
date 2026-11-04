@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ActionBanner } from '@/components/ActionBanner'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateView'
 import { QuorumCard } from '@/components/QuorumCard'
 import { ReadinessCard } from '@/components/ReadinessCard'
@@ -44,6 +45,8 @@ export function CommandCentre({ onActiveIncident }: { onActiveIncident: (id: str
         <h1 className="text-foreground text-xl font-bold tracking-tight">Crisis Command Centre</h1>
         <p className="text-muted-foreground text-sm">{payload.incident.id}</p>
       </div>
+
+      <ActionBanner quorum={payload.quorum} tasks={payload.tasks} />
 
       <ReadinessCard pct={readiness.pct} label={readiness.label} />
 

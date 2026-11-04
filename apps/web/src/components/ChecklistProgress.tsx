@@ -1,6 +1,6 @@
 import { Check, Circle, Clock } from 'lucide-react'
 
-import { Progress } from '@/components/ui/progress'
+import { SegmentedProgress } from '@/components/ui/segmented-progress'
 import { cn } from '@/lib/utils'
 
 export interface ChecklistItem {
@@ -62,7 +62,7 @@ export function ChecklistProgress({
         </ul>
       )}
       <div className="flex items-center gap-3">
-        <Progress value={pct} className="h-1.5" />
+        <SegmentedProgress total={items.length} completed={done} className="flex-1" />
         <span className="font-mono text-muted-foreground shrink-0 text-xs font-semibold tabular-nums">{pct}%</span>
       </div>
     </div>

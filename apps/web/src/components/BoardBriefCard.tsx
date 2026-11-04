@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileDown, Loader2, Users2 } from 'lucide-react'
+import { CircleDashed, FileDown, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -104,14 +104,16 @@ export function BoardBriefCard({ payload, incidentId }: { payload: FullIncidentP
         {pendingVotes.length === 0 ? (
           <p className="text-muted-foreground text-sm">Quorum fully resolved.</p>
         ) : (
-          <ul className="flex flex-col gap-1">
-            {pendingVotes.map((vote) => (
-              <li key={vote.role} className="flex items-center gap-2 text-sm">
-                <Users2 className="text-muted-foreground size-3.5" aria-hidden="true" />
-                {vote.role} review
-              </li>
-            ))}
-          </ul>
+          <div className="bg-destructive/10 border-destructive/30 mt-1 rounded-lg border p-3">
+            <ul className="flex flex-col gap-1.5">
+              {pendingVotes.map((vote) => (
+                <li key={vote.role} className="text-destructive flex items-center gap-2 text-sm font-semibold">
+                  <CircleDashed className="size-4 shrink-0" aria-hidden="true" />
+                  {vote.role} review & sign-off required
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </CardContent>
 
