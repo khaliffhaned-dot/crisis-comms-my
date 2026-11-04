@@ -133,16 +133,24 @@ export class IncidentRepository {
   async seedFirst60Tasks(incidentId: string, incidentCreatedAt: string): Promise<void> {
     const t0 = new Date(incidentCreatedAt).getTime()
     const now = nowIso()
+    const values: unknown[] = []
+    const placeholders: string[] = []
+
     for (const step of FIRST_60_STEPS) {
       const dueAt = new Date(t0 + bandUpperMinutes(step.band) * 60 * 1000).toISOString()
-      await this.db
-        .prepare(
-          `INSERT INTO tasks (id, incident_id, step_index, title, owner, status, due_band, due_at, created_at)
-           VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
-        )
-        .bind(id('TSK'), incidentId, step.step, step.en, step.owner, step.band, dueAt, now)
-        .run()
+      placeholders.push('(?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      values.push(id('TSK'), incidentId, step.step, step.en, step.owner, 'pending', step.band, dueAt, now)
     }
+
+    if (values.length === 0) return
+
+    await this.db
+      .prepare(
+        `INSERT INTO tasks (id, incident_id, step_index, title, owner, status, due_band, due_at, created_at)
+         VALUES ${placeholders.join(', ')}`
+      )
+      .bind(...values)
+      .run()
   }
 
   async listTasks(incidentId: string): Promise<Task[]> {
@@ -225,3 +233,4 @@ export class IncidentRepository {
 export function incidentRepo(env: Env) {
   return new IncidentRepository(env.DB)
 }
+

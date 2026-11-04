@@ -202,11 +202,12 @@ export function appendAudit(inc: Incident, actor: string, action: string, detail
 export async function listIncidents(): Promise<Incident[]> {
   const base = apiBase()
   if (base) {
-    const payload = (await requestJson(`/api/v1/incidents?organisation_id=${encodeURIComponent(orgId())}`)) as {
-      items?: Array<{ id: string }>
+    const payload = (await requestJson(
+      `/api/v1/incidents?organisation_id=${encodeURIComponent(orgId())}&full=true`
+    )) as {
+      items?: Incident[]
     }
-    const ids = (payload.items ?? []).map((i) => i.id)
-    return Promise.all(ids.map((id) => fetchFull(id)))
+    return payload.items ?? []
   }
 
   let list = loadLocal()
@@ -234,58 +235,51 @@ export async function saveIncident(incident: Incident): Promise<Incident> {
   const base = apiBase()
   if (base) {
     const id = encodeURIComponent(incident.id)
+    const currentTasks = (await requestJson(`/api/v1/incidents/${id}/tasks`)) as { items?: BackendTask[] }
+    const currentByStep = new Map(
+      (currentTasks.items ?? []).filter((t) => typeof t.step_index === 'number').map((t) => [t.step_index!, t])
+    )
 
-    await requestJson(`/api/v1/incidents/${id}`, {
-      method: 'PATCH',
+    const taskChanges = incident.checked
+      .map((isDone, index) => {
+        const stepIndex = index + 1
+        const currentTask = currentByStep.get(stepIndex)
+        if (!currentTask) return null
+        const desired = isDone ? 'done' : 'pending'
+        return desired === currentTask.status ? null : { taskId: currentTask.id, status: desired }
+      })
+      .filter(Boolean) as Array<{ taskId: string; status: string }>
+
+    const touchedVotes = incident.quorum.filter((vote) => vote.state !== 'pending' || vote.name || vote.note || vote.at)
+    const clockChanges = Object.entries(incident.clocks || {}).filter(([_, active]) => !!active)
+
+    await requestJson(`/api/v1/incidents/${id}/save`, {
+      method: 'POST',
       body: JSON.stringify({
-        title: incident.title,
-        status: incident.status,
-        severity: incident.severity,
-        dimension: incident.dimension,
-        scenario: incident.scenario,
-        owner: incident.owner,
-        statement: incident.statement,
-        statement_lang: incident.statementLang,
+        incident: {
+          title: incident.title,
+          status: incident.status,
+          severity: incident.severity,
+          dimension: incident.dimension,
+          scenario: incident.scenario,
+          owner: incident.owner,
+          statement: incident.statement,
+          statement_lang: incident.statementLang,
+        },
+        tasks: taskChanges,
+        quorum: touchedVotes.map((vote) => ({
+          role: vote.role,
+          state: vote.state,
+          note: vote.note ?? null,
+          respondent_name: vote.name ?? null,
+        })),
+        clocks: clockChanges.reduce<Record<string, boolean>>((acc, [clockId]) => {
+          acc[clockId] = true
+          return acc
+        }, {}),
         actor: 'Operator',
       }),
     })
-
-    const currentTasks = (await requestJson(`/api/v1/incidents/${id}/tasks`)) as { items?: BackendTask[] }
-    await Promise.all(
-      (currentTasks.items ?? []).map((t) => {
-        if (!t.step_index) return Promise.resolve()
-        const desired = incident.checked[t.step_index - 1] ? 'done' : 'pending'
-        if (desired === t.status) return Promise.resolve()
-        return requestJson(`/api/v1/incidents/${id}/tasks/${encodeURIComponent(t.id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: desired, actor: 'Operator' }),
-        })
-      })
-    )
-
-    const touchedVotes = incident.quorum.filter((vote) => vote.state !== 'pending' || vote.name || vote.note || vote.at)
-    await Promise.all(
-      touchedVotes.map((vote) =>
-        requestJson(`/api/v1/incidents/${id}/quorum/${encodeURIComponent(vote.role)}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            state: vote.state,
-            note: vote.note ?? null,
-            respondent_name: vote.name ?? null,
-            actor: vote.name || 'Operator',
-          }),
-        })
-      )
-    )
-
-    await Promise.all(
-      Object.entries(incident.clocks || {}).map(([clockId, active]) =>
-        requestJson(`/api/v1/incidents/${id}/clocks/${encodeURIComponent(clockId)}/toggle`, {
-          method: 'POST',
-          body: JSON.stringify({ active: Boolean(active), actor: 'Operator' }),
-        }).catch(() => undefined)
-      )
-    )
 
     return fetchFull(incident.id)
   }
@@ -357,3 +351,4 @@ export async function generateHoldingStatement(opts: {
 }
 
 export { wsBase, apiBase }
+
