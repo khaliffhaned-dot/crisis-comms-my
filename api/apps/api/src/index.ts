@@ -1,9 +1,16 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { Env, IntelligenceAssessInput } from '@escalate-my/shared'
-import { AppError } from '@escalate-my/shared'
-import { IncidentService, assessIncidentRules } from '@escalate-my/incidents'
-import { listRegulatoryClocks, matchObligations, type ObligationRow } from '@escalate-my/regulatory'
+import { AppError, nowIso } from '@escalate-my/shared'
+import { IncidentService, incidentRepo, assessIncidentRules } from '@escalate-my/incidents'
+import {
+  listRegulatoryClocks,
+  matchObligations,
+  trackObligations,
+  findOverdueObligations,
+  escalateObligation,
+  type ObligationRow,
+} from '@escalate-my/regulatory'
 import { generateAndStoreBrief, buildBoardInsights } from '@escalate-my/boardbrief'
 
 const app = new Hono<{ Bindings: Env }>()
@@ -18,22 +25,47 @@ app.get('/api/v1/regulatory/clocks', (c) => c.json({ clocks: listRegulatoryClock
 
 /** Regulatory Intelligence™ — match facts to obligation catalog */
 app.post('/api/v1/intelligence/obligations', async (c) => {
-  const body = await c.req.json<{ facts: string; bursa_listed?: boolean }>()
+  const body = await c.req.json<{ facts: string; bursa_listed?: boolean; incident_id?: string }>()
   if (!body.facts) return c.json({ error: 'facts required' }, 400)
   const res = await c.env.DB.prepare(
-    `SELECT id, regulator, code, title_en, title_bm, trigger_hints, deadline_en, deadline_bm, status, active FROM regulatory_obligations WHERE active = 1`
+    `SELECT id, regulator, code, title_en, title_bm, trigger_hints, deadline_en, deadline_bm, status, active, deadline_hours FROM regulatory_obligations WHERE active = 1`
   ).all<ObligationRow>()
-  const matched = matchObligations(body.facts, res.results ?? [], {
+  const rows = res.results ?? []
+  const matched = matchObligations(body.facts, rows, {
     bursaListed: body.bursa_listed,
   })
+
+  let tracked = false
+  if (body.incident_id && matched.length > 0) {
+    const deadlineHoursById = new Map(rows.map((r) => [r.id, r.deadline_hours]))
+    await trackObligations(c.env.DB, body.incident_id, matched, deadlineHoursById)
+    tracked = true
+  }
+
   return c.json({
     matched,
+    tracked,
     headline:
       matched.length > 0
         ? 'Potential regulatory obligations detected — review required'
         : 'No catalog matches — continue manual Regulatory Clock review',
     disclaimer: 'Not legal advice. Counsel must verify all obligations.',
   })
+})
+
+/** Regulatory Clock™ — obligations tracked against one incident, with computed deadlines */
+app.get('/api/v1/incidents/:id/obligations', async (c) => {
+  const res = await c.env.DB.prepare(
+    `SELECT io.id, io.obligation_id, io.status, io.triggered_at, io.deadline_at, io.escalated_at,
+            o.regulator, o.code, o.title_en, o.title_bm
+     FROM incident_obligations io
+     JOIN regulatory_obligations o ON o.id = io.obligation_id
+     WHERE io.incident_id = ?
+     ORDER BY io.deadline_at IS NULL, io.deadline_at ASC`
+  )
+    .bind(c.req.param('id'))
+    .all()
+  return c.json({ items: res.results ?? [] })
 })
 
 /** Decision Intelligence™ — severity + recommended actions */
@@ -146,4 +178,37 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal error' }, 500)
 })
 
-export default app
+/**
+ * Regulatory Clock™ cron — runs every 15 minutes (see infrastructure/wrangler
+ * wrangler.jsonc `triggers.crons`). Flags incident_obligations whose deadline
+ * has arrived so a human sees it, instead of relying on someone remembering
+ * to check a countdown. Never changes incident severity and never notifies
+ * anyone outside the platform — it only writes an audit_log entry and marks
+ * the obligation 'escalated' for the UI to surface. Recommendations only,
+ * same as everywhere else in this product.
+ */
+async function runRegulatoryClockCron(env: Env): Promise<{ escalated: number }> {
+  const now = nowIso()
+  const overdue = await findOverdueObligations(env.DB, now)
+  if (overdue.length === 0) return { escalated: 0 }
+
+  const repo = incidentRepo(env)
+  for (const row of overdue) {
+    await escalateObligation(env.DB, row.io_id, now)
+    await repo.writeAudit({
+      organisation_id: row.organisation_id,
+      incident_id: row.incident_id,
+      actor: 'Sistem',
+      action: 'regulatory_deadline_escalated',
+      detail: `${row.regulator} — ${row.title_bm} (${row.title_en}): tarikh akhir tercapai, perlu semakan manusia.`,
+    })
+  }
+  return { escalated: overdue.length }
+}
+
+export default {
+  fetch: app.fetch,
+  scheduled: async (_event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
+    ctx.waitUntil(runRegulatoryClockCron(env))
+  },
+}

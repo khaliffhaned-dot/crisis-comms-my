@@ -27,5 +27,8 @@
   "vars": {
     "APP_NAME": "Escalate MY",
     "API_VERSION": "v1"
+  },
+  "triggers": {
+    "crons": ["*/15 * * * *"]
   }
 }

@@ -11,6 +11,7 @@ export interface ObligationRow {
   deadline_bm: string
   status: string
   active: number
+  deadline_hours?: number | null
 }
 
 export function matchObligations(
