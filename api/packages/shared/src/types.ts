@@ -58,6 +58,15 @@ export type SignalStatus = 'pending' | 'actioned' | 'dismissed'
  * an Incident by itself; a human reviews recommended_severity and
  * explicitly actions or dismisses it (see packages/incidents/src/signals.ts).
  */
+export type ThreeRLevel = 'Low' | 'Medium' | 'High'
+
+/** Royal / Race / Religion sensitivity flags — see packages/incidents/src/culturalSensitivity.ts for how these are computed and why. */
+export interface ThreeRAssessment {
+  royal: ThreeRLevel
+  race: ThreeRLevel
+  religion: ThreeRLevel
+}
+
 export interface Signal {
   id: string
   organisation_id: string
@@ -66,6 +75,13 @@ export interface Signal {
   description: string
   severity_hint: string | null
   recommended_severity: Severity | null
+  /** Who's likely affected — a small deterministic lookup by incident_type, not a guess made up per-signal. */
+  potential_stakeholders: string[]
+  /** Regulator names matched against the real regulatory_obligations catalog (matchObligations) — never fabricated. */
+  potential_authorities: string[]
+  /** 0-100, same heuristic confidence score as Decision Intelligence's rules-based assessment. */
+  confidence: number | null
+  three_r: ThreeRAssessment | null
   occurred_at: string
   status: SignalStatus
   incident_id: string | null

@@ -20,6 +20,7 @@ interface LandingProps {
   lang: Lang
   onEnterPlaybook: () => void
   onEnterManual: () => void
+  onStartDemo: () => void
   onToggleLang: () => void
 }
 
@@ -104,7 +105,7 @@ const PROOF = {
   ],
 }
 
-export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggleLang }: LandingProps) {
+export default function Landing({ lang, onEnterPlaybook, onEnterManual, onStartDemo, onToggleLang }: LandingProps) {
   const [navOpen, setNavOpen] = useState(false)
   const t = (en: string, bm: string) => (lang === 'bm' ? bm : en)
   const setLang = (next: Lang) => {
@@ -347,6 +348,12 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
                   <div className="ops-kpi__meta">{t('First 60 Minutes tasks', 'Tugasan 60 Minit Pertama')}</div>
                 </div>
               </div>
+            </div>
+            <div style={{ textAlign: 'center', marginTop: '28px' }}>
+              <button type="button" className="ent-btn ent-btn--outline" onClick={onStartDemo}>
+                {t('Try it yourself — start a live simulation', 'Cuba sendiri — mulakan simulasi langsung')}
+                <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" />
+              </button>
             </div>
           </div>
         </section>

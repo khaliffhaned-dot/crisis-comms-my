@@ -143,10 +143,10 @@
   color: white;
 }
 
-.sev-1 { background: #198754; }
-.sev-2 { background: #eab308; color: #212529; }
-.sev-3 { background: #fd7e14; }
-.sev-4 { background: #dc3545; }
+.sev-1 { background: var(--severity-l1); }
+.sev-2 { background: var(--severity-l2); }
+.sev-3 { background: var(--severity-l3); }
+.sev-4 { background: var(--severity-l4); }
 
 .ops-panels {
   display: grid;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Landing from './Landing'
+import DemoWalkthrough from './DemoWalkthrough'
 import Manual from './Manual'
 import First60Module from './First60Module'
 import ClocksModule from './ClocksModule'
@@ -9,7 +10,7 @@ import AuditModule from './core/AuditModule'
 import DirectoryModule from './core/DirectoryModule'
 import SignalsModule from './core/SignalsModule'
 import { DecisionIntelligence, RegulatoryIntelligence, BoardIntelligence } from './core/IntelligenceModules'
-import { CORE_MODULES, type CoreSection } from './core/moduleConfig'
+import { CORE_MODULES, type CoreSection, type CoreNavItem } from './core/moduleConfig'
 import {
   listIncidents,
   saveIncident,
@@ -93,9 +94,16 @@ const APPROVED_RESPONSE_TYPES: Array<{ id: string; en: string; bm: string; audie
 
 const RESPONSE_AUDIENCES = ['Regulator', 'Media', 'Customer', 'Employee', 'Board', 'Social Media']
 
+/** CoreNavItem.icon is either an Escalate Icon Set component or (for 'manual' only) a plain emoji string — see moduleConfig.ts. */
+function NavIcon({ icon }: { icon: CoreNavItem['icon'] }) {
+  if (typeof icon === 'string') return <>{icon}</>
+  const Icon = icon
+  return <Icon size={18} />
+}
+
 export default function CoreShell() {
   const [lang, setLang] = useState<Lang>('en')
-  const [mode, setMode] = useState<'landing' | 'app'>('landing')
+  const [mode, setMode] = useState<'landing' | 'app' | 'demo'>('landing')
 
   useEffect(() => {
     document.documentElement.lang = lang === 'bm' ? 'ms' : 'en'
@@ -302,7 +310,22 @@ export default function CoreShell() {
           setSection('manual')
           setMode('app')
         }}
+        onStartDemo={() => setMode('demo')}
         onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
+      />
+    )
+  }
+
+  if (mode === 'demo') {
+    return (
+      <DemoWalkthrough
+        lang={lang}
+        onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
+        onExit={() => setMode('landing')}
+        onEnterApp={async (incidentId) => {
+          await onSignalIncidentCreated(incidentId)
+          setMode('app')
+        }}
       />
     )
   }
@@ -326,7 +349,7 @@ export default function CoreShell() {
             {CORE_MODULES.filter((m) => m.group === 'core').map((m) => (
               <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
                 <span className="nav-item__content">
-                  <span className="nav-item__icon">{m.icon}</span>
+                  <span className="nav-item__icon"><NavIcon icon={m.icon} /></span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
                 </span>
               </button>
@@ -336,7 +359,7 @@ export default function CoreShell() {
             {CORE_MODULES.filter((m) => m.group === 'intel').map((m) => (
               <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
                 <span className="nav-item__content">
-                  <span className="nav-item__icon">{m.icon}</span>
+                  <span className="nav-item__icon"><NavIcon icon={m.icon} /></span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
                 </span>
               </button>
@@ -346,7 +369,7 @@ export default function CoreShell() {
             {CORE_MODULES.filter((m) => m.group === 'ref').map((m) => (
               <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
                 <span className="nav-item__content">
-                  <span className="nav-item__icon">{m.icon}</span>
+                  <span className="nav-item__icon"><NavIcon icon={m.icon} /></span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
                 </span>
               </button>
