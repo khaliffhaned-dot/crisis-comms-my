@@ -492,6 +492,13 @@
   color: var(--ent-ink-body);
   line-height: 1.55;
 }
+.ent-card__meta {
+  margin: 10px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ent-ink-muted);
+}
 .ent-card--step {
   padding: 24px;
 }
@@ -548,6 +555,64 @@
 }
 .ent-cta-band .ent-btn {
   margin-top: 26px;
+}
+
+/* Dashboard preview — reuses ops-dashboard.css's real in-app component
+   classes (ops-dashboard__top, ops-kpi, sev-badge, …) so what a prospect
+   sees here is literally the same visual language as the real product,
+   not a separate mockup drawn to look similar. Only this wrapper's own
+   layout (the 5-tile KPI row and the "example" label) is landing-specific. */
+.ent-dashboard-preview {
+  margin: 0;
+}
+.ops-kpi-grid.ent-dashboard-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+@media (max-width: 960px) {
+  .ops-kpi-grid.ent-dashboard-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .ops-kpi-grid.ent-dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ent-example-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #e5e7eb;
+}
+
+/* Proof list */
+.ent-proof-list {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ent-proof-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ent-ink-body);
+}
+.ent-proof-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--ent-success);
 }
 
 /* Footer */

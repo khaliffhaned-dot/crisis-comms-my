@@ -50,6 +50,30 @@ export interface Incident {
   closed_at: string | null
 }
 
+export type SignalStatus = 'pending' | 'actioned' | 'dismissed'
+
+/**
+ * A normalized event pushed in from a system Escalate doesn't replace —
+ * Meltwater, Sentinel, ServiceNow, a generic webhook, etc. Never becomes
+ * an Incident by itself; a human reviews recommended_severity and
+ * explicitly actions or dismisses it (see packages/incidents/src/signals.ts).
+ */
+export interface Signal {
+  id: string
+  organisation_id: string
+  source: string
+  incident_type: string
+  description: string
+  severity_hint: string | null
+  recommended_severity: Severity | null
+  occurred_at: string
+  status: SignalStatus
+  incident_id: string | null
+  created_at: string
+  resolved_at: string | null
+  resolved_by: string | null
+}
+
 export interface IncidentUpdate {
   id: string
   incident_id: string
