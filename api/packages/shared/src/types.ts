@@ -104,6 +104,10 @@ export interface AuditEntry {
   action: string
   detail: string | null
   created_at: string
+  /** Hash-chain fields (migration 0006) — null on rows written before the
+   * chain existed; see IncidentRepository.verifyAuditChain. */
+  prev_hash?: string | null
+  hash?: string | null
 }
 
 export interface Env {

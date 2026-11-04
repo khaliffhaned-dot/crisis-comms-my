@@ -202,12 +202,20 @@ export function appendAudit(inc: Incident, actor: string, action: string, detail
 export async function listIncidents(): Promise<Incident[]> {
   const base = apiBase()
   if (base) {
+    // Each item is FullIncidentPayload-shaped ({ incident, tasks, quorum,
+    // audit, clocks }), same as the single-incident /full endpoint — not
+    // pre-flattened to the frontend's Incident shape, so it goes through
+    // the same incidentFromFull() mapping as fetchFull() does. Casting the
+    // raw payload straight to Incident[] here previously skipped that
+    // mapping (snake_case fields, unmapped quorum/audit rows, and a
+    // `checked` the backend can't derive) — every field but the ones that
+    // happened to share a name was silently wrong on this screen.
     const payload = (await requestJson(
       `/api/v1/incidents?organisation_id=${encodeURIComponent(orgId())}&full=true`
     )) as {
-      items?: Incident[]
+      items?: FullIncidentPayload[]
     }
-    return payload.items ?? []
+    return (payload.items ?? []).map(incidentFromFull)
   }
 
   let list = loadLocal()

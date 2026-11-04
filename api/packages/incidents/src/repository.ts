@@ -130,27 +130,31 @@ export class IncidentRepository {
   }
 
   /** Seed the 13 First Sixty Minutes™ tasks against a freshly created incident, each with a due_at computed from its band. */
+  /**
+   * One D1 round-trip via db.batch(), not 13 sequential .run() awaits — the
+   * actual perf win intended here — but each of the 13 rows is still its
+   * own prepared statement. A single INSERT with all 13 rows' values
+   * flattened into one VALUES list (9 columns × 13 rows = 117 bound
+   * parameters) throws "too many SQL variables: SQLITE_ERROR" — D1's bound
+   * parameter ceiling is well under that, so every incident creation was
+   * failing with a 500 until this was batch()'d instead.
+   */
   async seedFirst60Tasks(incidentId: string, incidentCreatedAt: string): Promise<void> {
     const t0 = new Date(incidentCreatedAt).getTime()
     const now = nowIso()
-    const values: unknown[] = []
-    const placeholders: string[] = []
 
-    for (const step of FIRST_60_STEPS) {
+    if (FIRST_60_STEPS.length === 0) return
+
+    const insert = this.db.prepare(
+      `INSERT INTO tasks (id, incident_id, step_index, title, owner, status, due_band, due_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    const statements = FIRST_60_STEPS.map((step) => {
       const dueAt = new Date(t0 + bandUpperMinutes(step.band) * 60 * 1000).toISOString()
-      placeholders.push('(?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      values.push(id('TSK'), incidentId, step.step, step.en, step.owner, 'pending', step.band, dueAt, now)
-    }
+      return insert.bind(id('TSK'), incidentId, step.step, step.en, step.owner, 'pending', step.band, dueAt, now)
+    })
 
-    if (values.length === 0) return
-
-    await this.db
-      .prepare(
-        `INSERT INTO tasks (id, incident_id, step_index, title, owner, status, due_band, due_at, created_at)
-         VALUES ${placeholders.join(', ')}`
-      )
-      .bind(...values)
-      .run()
+    await this.db.batch(statements)
   }
 
   async listTasks(incidentId: string): Promise<Task[]> {
@@ -213,6 +217,17 @@ export class IncidentRepository {
     return res.results ?? []
   }
 
+  /**
+   * Hash-chained per organisation (see migrations/0006_audit_chain.sql) so a
+   * row edited or deleted directly in D1 — bypassing writeAudit — breaks the
+   * chain from that point on, detectable via verifyAuditChain(). Scoped per
+   * organisation, ordered by SQLite's implicit rowid (insertion order) since
+   * `id()` is random and `created_at` can tie on rapid consecutive writes.
+   * Not a distributed ledger: a write racing this read-then-insert in the
+   * same organisation could theoretically interleave, but this tool's write
+   * volume is human-paced, not high-throughput, and the goal is catching
+   * direct-DB tampering after the fact, not serializing concurrent writers.
+   */
   async writeAudit(entry: {
     organisation_id: string
     incident_id?: string | null
@@ -220,14 +235,99 @@ export class IncidentRepository {
     action: string
     detail?: string
   }) {
+    const prevRow = await this.db
+      .prepare(`SELECT hash FROM audit_log WHERE organisation_id = ? ORDER BY rowid DESC LIMIT 1`)
+      .bind(entry.organisation_id)
+      .first<{ hash: string | null }>()
+    const prevHash = prevRow?.hash ?? ''
+
+    const auditId = id('AUD')
+    const createdAt = nowIso()
+    const detail = entry.detail ?? null
+    const hash = await hashAuditEntry({
+      prevHash,
+      id: auditId,
+      organisation_id: entry.organisation_id,
+      incident_id: entry.incident_id ?? null,
+      actor: entry.actor,
+      action: entry.action,
+      detail,
+      created_at: createdAt,
+    })
+
     await this.db
       .prepare(
-        `INSERT INTO audit_log (id, organisation_id, incident_id, actor, action, detail, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO audit_log (id, organisation_id, incident_id, actor, action, detail, created_at, prev_hash, hash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(id('AUD'), entry.organisation_id, entry.incident_id ?? null, entry.actor, entry.action, entry.detail ?? null, nowIso())
+      .bind(auditId, entry.organisation_id, entry.incident_id ?? null, entry.actor, entry.action, detail, createdAt, prevHash, hash)
       .run()
   }
+
+  /**
+   * Walks an organisation's audit_log in insertion order and recomputes
+   * each row's hash, failing at the first mismatch or broken prev_hash
+   * link. Rows written before migration 0006 have no hash (NULL) and are
+   * excluded from the chain entirely — historical data the chain never
+   * signed is neither valid nor broken, just outside its scope.
+   */
+  async verifyAuditChain(organisationId: string): Promise<{ valid: boolean; checked: number; brokenAt?: string }> {
+    const res = await this.db
+      .prepare(`SELECT * FROM audit_log WHERE organisation_id = ? AND hash IS NOT NULL ORDER BY rowid ASC`)
+      .bind(organisationId)
+      .all<AuditEntry & { prev_hash: string | null; hash: string | null }>()
+    const rows = res.results ?? []
+
+    let expectedPrev = ''
+    let checked = 0
+    for (const row of rows) {
+      if ((row.prev_hash ?? '') !== expectedPrev) {
+        return { valid: false, checked, brokenAt: row.id }
+      }
+      const recomputed = await hashAuditEntry({
+        prevHash: expectedPrev,
+        id: row.id,
+        organisation_id: row.organisation_id,
+        incident_id: row.incident_id,
+        actor: row.actor,
+        action: row.action,
+        detail: row.detail,
+        created_at: row.created_at,
+      })
+      if (recomputed !== row.hash) {
+        return { valid: false, checked, brokenAt: row.id }
+      }
+      expectedPrev = row.hash as string
+      checked++
+    }
+    return { valid: true, checked }
+  }
+}
+
+async function hashAuditEntry(fields: {
+  prevHash: string
+  id: string
+  organisation_id: string
+  incident_id: string | null
+  actor: string
+  action: string
+  detail: string | null
+  created_at: string
+}): Promise<string> {
+  const canonical = [
+    fields.prevHash,
+    fields.id,
+    fields.organisation_id,
+    fields.incident_id ?? '',
+    fields.actor,
+    fields.action,
+    fields.detail ?? '',
+    fields.created_at,
+  ].join('\u0000')
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical))
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 export function incidentRepo(env: Env) {
