@@ -1,3 +1,5 @@
-name = "escalate-crisis-intel"
+
+# wrangler.toml
+name = 'escalate-my-api'
 pages_build_output_dir = "dist"
 compatibility_date = "2025-06-01"
