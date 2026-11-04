@@ -1,0 +1,50 @@
+---
+title: Escalate MY — current app structure (why it feels unsynchronized)
+---
+flowchart TD
+  Browser(["Visitor's browser"])
+
+  subgraph PAGES["Cloudflare Pages — name drift across config"]
+    direction TB
+    NAMEDRIFT["⚠ 4 different names for one project:<br/>package.json → escalate-my<br/>wrangler.toml → escalate_crisisintel<br/>README.md → escalate-crisis-intel<br/>live URL → escalate-my.pages.dev"]
+  end
+
+  subgraph FE_A["Frontend A — src/ · THE product UI · root route"]
+    direction TB
+    A1["main.tsx"] --> A2["App.tsx"] --> A3["CoreShell.tsx<br/>(mode: landing / demo / app)"]
+    A3 --> A4["core/moduleConfig.ts<br/>CORE_MODULES — ACTIVE, imported"]
+    A3 --> A5["core/api.ts<br/>its own API client"]
+    A6["moduleConfig.ts (root)<br/>old MODULES — ZERO imports"]:::dead
+    A7["OpsDashboard.tsx<br/>ZERO imports"]:::dead
+    A8["CoreFiveModule.tsx<br/>ZERO imports"]:::dead
+  end
+
+  subgraph FE_B["Frontend B — apps/web/ · 'sales prototype' · separate Vite app"]
+    direction TB
+    B1["main.tsx"] --> B2["App.tsx + react-router"] --> B3["pages/CommandCentre.tsx<br/>pages/IncidentDetails.tsx<br/>pages/BoardBrief.tsx"]
+    B3 --> B4["lib/api.ts<br/>its OWN separate API client"]
+    B5["Tailwind v4 + shadcn/ui + Radix<br/>— totally different design system<br/>than Frontend A's hand-rolled CSS"]:::note
+  end
+
+  subgraph BE["Backend — api/ · Hono Worker 'escalate-my-api'"]
+    direction TB
+    W1["apps/api/src/index.ts<br/>REST routes"]
+    W2[("D1: escalate-my-db")]
+    W3[("KV: CONFIG")]
+    W4[["Durable Object:<br/>IncidentRoom (presence/live-update)"]]
+    W1 --- W2
+    W1 --- W3
+    W1 --- W4
+  end
+
+  Browser --> PAGES
+  PAGES --> FE_A
+  PAGES -. "same deploy,<br/>unrelated routes" .-> FE_B
+  A5 -->|"fetch /api/v1/*"| W1
+  B4 -->|"fetch — own shape,<br/>can silently drift from A5"| W1
+  FE_B -. "only Frontend A wires to<br/>IncidentRoom presence" .-> W4
+
+  classDef dead fill:#fde2e1,stroke:#c0392b,stroke-width:1px,color:#7a1f1f,stroke-dasharray: 4 3
+  classDef note fill:#fff6d8,stroke:#b8860b,stroke-width:1px,color:#5c4a04
+  classDef warn fill:#fde2e1,stroke:#c0392b,stroke-width:1px,color:#7a1f1f
+  class NAMEDRIFT warn

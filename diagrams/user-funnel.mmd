@@ -1,0 +1,51 @@
+---
+title: Escalate MY — user funnel through CoreShell (src/, the live product UI)
+---
+flowchart TD
+  Start(["Visitor lands on /"]) --> Landing["Landing.tsx<br/>(mode = landing)"]
+
+  Landing -->|"Enter Playbook"| ModeApp1["mode = app<br/>section = command"]
+  Landing -->|"Enter Manual"| ModeApp2["mode = app<br/>section = manual"]
+  Landing -->|"Try it yourself — Start demo"| Demo["DemoWalkthrough.tsx<br/>(mode = demo)"]
+
+  subgraph DEMOFUNNEL["Demo funnel — 6 guided steps"]
+    direction TB
+    D1["1. Pick a seed signal<br/>(e.g. Bernama / substation)"] --> D2["2. Signal detected"]
+    D2 --> D3["3. Run assessment<br/>→ severity + stakeholders + authorities"]
+    D3 --> D4["4. 3R sensitivity review<br/>Royal / Race / Religion"]
+    D4 --> D5["5. Decision point<br/>Create incident  or  Dismiss"]
+    D5 -->|"Create incident"| D6["6. Activated —<br/>severity tracking, clocks, quorum shown"]
+  end
+  Demo --> D1
+  D6 -->|"Continue to Command Centre"| ModeApp3["mode = app<br/>section = incident<br/>(real incident now active)"]
+
+  subgraph SHELL["CoreShell sidebar — mode = app"]
+    direction TB
+    subgraph CORE["group: core"]
+      direction TB
+      S1["Command Centre"]
+      S2["Incident Management"]
+      S3["First Sixty Minutes"]
+      S4["Regulatory Clocks"]
+      S5["Decision Quorum"]
+      S6["Statements ⚠ renders TWO stacked<br/>panels with no tab:<br/>Holding Statement Builder<br/>+ Approved Responses™"]:::warn
+      S7["Audit Trail"]
+      S8["Signal Intake"]
+    end
+    subgraph INTEL["group: intel"]
+      direction TB
+      S9["Decision Intelligence"]
+      S10["Regulatory Intelligence"]
+      S11["Board Intelligence ⚠ with no active<br/>incident, shows its own empty state<br/>AND the generic 'create/open an<br/>incident first' message — both at once"]:::warn
+    end
+    subgraph REF["group: ref"]
+      direction TB
+      S12["Manual"]
+    end
+  end
+
+  ModeApp1 --> SHELL
+  ModeApp2 --> S12
+  ModeApp3 --> SHELL
+
+  classDef warn fill:#fde2e1,stroke:#c0392b,stroke-width:1px,color:#7a1f1f
