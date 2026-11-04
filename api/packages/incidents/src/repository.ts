@@ -1,5 +1,28 @@
-import { id, nowIso, NotFoundError, type Env, type Incident, type IncidentStatus, type Task } from '@escalate-my/shared'
+import {
+  id,
+  nowIso,
+  NotFoundError,
+  type Env,
+  type Incident,
+  type IncidentStatus,
+  type Task,
+  type TaskStatus,
+  type QuorumResponse,
+  type QuorumState,
+  type AuditEntry,
+} from '@escalate-my/shared'
 import { FIRST_60_STEPS, bandUpperMinutes } from './first60'
+
+export interface IncidentPatch {
+  title?: string
+  status?: IncidentStatus
+  severity?: number | null
+  dimension?: string | null
+  scenario?: string
+  owner?: string | null
+  statement?: string
+  statement_lang?: string
+}
 
 export class IncidentRepository {
   constructor(private db: D1Database) {}
@@ -88,6 +111,24 @@ export class IncidentRepository {
       .run()
   }
 
+  /** Generic partial update used by PATCH /incidents/:id. Only touches fields that were actually sent. */
+  async update(incidentId: string, patch: IncidentPatch): Promise<Incident> {
+    const fields: string[] = []
+    const values: unknown[] = []
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === undefined) continue
+      fields.push(`${key} = ?`)
+      values.push(value)
+    }
+    if (fields.length > 0) {
+      fields.push(`updated_at = ?`)
+      values.push(nowIso())
+      values.push(incidentId)
+      await this.db.prepare(`UPDATE incidents SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run()
+    }
+    return this.get(incidentId)
+  }
+
   /** Seed the 13 First Sixty Minutes™ tasks against a freshly created incident, each with a due_at computed from its band. */
   async seedFirst60Tasks(incidentId: string, incidentCreatedAt: string): Promise<void> {
     const t0 = new Date(incidentCreatedAt).getTime()
@@ -109,6 +150,58 @@ export class IncidentRepository {
       .prepare(`SELECT * FROM tasks WHERE incident_id = ? ORDER BY step_index ASC`)
       .bind(incidentId)
       .all<Task>()
+    return res.results ?? []
+  }
+
+  async getTask(taskId: string): Promise<Task> {
+    const row = await this.db.prepare(`SELECT * FROM tasks WHERE id = ?`).bind(taskId).first<Task>()
+    if (!row) throw new NotFoundError('Task')
+    return row
+  }
+
+  async updateTaskStatus(taskId: string, status: TaskStatus): Promise<Task> {
+    const completedAt = status === 'done' ? nowIso() : null
+    await this.db
+      .prepare(`UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?`)
+      .bind(status, completedAt, taskId)
+      .run()
+    return this.getTask(taskId)
+  }
+
+  async listQuorum(incidentId: string): Promise<QuorumResponse[]> {
+    const res = await this.db
+      .prepare(`SELECT * FROM quorum_responses WHERE incident_id = ? ORDER BY created_at ASC`)
+      .bind(incidentId)
+      .all<QuorumResponse>()
+    return res.results ?? []
+  }
+
+  /** Upsert a quorum vote for one role on one incident (unique per incident_id + role). */
+  async upsertQuorumVote(
+    incidentId: string,
+    role: string,
+    patch: { state: QuorumState; note?: string | null; respondent_name?: string | null }
+  ): Promise<void> {
+    const now = nowIso()
+    await this.db
+      .prepare(
+        `INSERT INTO quorum_responses (id, incident_id, role, respondent_name, state, note, responded_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(incident_id, role) DO UPDATE SET
+           state = excluded.state,
+           note = excluded.note,
+           respondent_name = excluded.respondent_name,
+           responded_at = excluded.responded_at`
+      )
+      .bind(id('QRM'), incidentId, role, patch.respondent_name ?? null, patch.state, patch.note ?? null, now, now)
+      .run()
+  }
+
+  async listAudit(incidentId: string): Promise<AuditEntry[]> {
+    const res = await this.db
+      .prepare(`SELECT * FROM audit_log WHERE incident_id = ? ORDER BY created_at DESC LIMIT 200`)
+      .bind(incidentId)
+      .all<AuditEntry>()
     return res.results ?? []
   }
 

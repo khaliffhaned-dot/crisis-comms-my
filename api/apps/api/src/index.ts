@@ -15,6 +15,10 @@ import {
   trackObligations,
   findOverdueObligations,
   escalateObligation,
+  startObligationTracking,
+  stopObligationTracking,
+  obligationIdForUiClock,
+  uiClockIdForObligation,
   type ObligationRow,
 } from '@escalate-my/regulatory'
 import { generateAndStoreBrief, buildBoardInsights } from '@escalate-my/boardbrief'
@@ -59,6 +63,36 @@ app.post('/api/v1/intelligence/obligations', async (c) => {
   })
 })
 
+/**
+ * Regulatory Clock™ — start or stop one of the UI's 7 clocks (ClocksModule /
+ * verifiedPractice.ts) for an incident. Mapped to the obligation catalog
+ * (uiClockMap.ts) so starting a clock creates a real, cron-tracked
+ * incident_obligations row with a computed deadline — not just a local flag.
+ */
+app.post('/api/v1/incidents/:id/clocks/:clockId/toggle', async (c) => {
+  const { id: incidentId, clockId } = c.req.param()
+  const body = await c.req.json<{ active: boolean; actor?: string }>()
+  const obligationId = obligationIdForUiClock(clockId)
+  if (!obligationId) {
+    return c.json({ error: `Unknown clock id: ${clockId}` }, 400)
+  }
+  const repo = incidentRepo(c.env)
+  const incident = await repo.get(incidentId)
+  if (body.active) {
+    await startObligationTracking(c.env.DB, incidentId, obligationId)
+  } else {
+    await stopObligationTracking(c.env.DB, incidentId, obligationId)
+  }
+  await repo.writeAudit({
+    organisation_id: incident.organisation_id,
+    incident_id: incidentId,
+    actor: body.actor || 'Operator',
+    action: body.active ? 'regulatory_clock_started' : 'regulatory_clock_stopped',
+    detail: clockId,
+  })
+  return c.json({ ok: true })
+})
+
 /** Regulatory Clock™ — obligations tracked against one incident, with computed deadlines */
 app.get('/api/v1/incidents/:id/obligations', async (c) => {
   const res = await c.env.DB.prepare(
@@ -72,6 +106,32 @@ app.get('/api/v1/incidents/:id/obligations', async (c) => {
     .bind(c.req.param('id'))
     .all()
   return c.json({ items: res.results ?? [] })
+})
+
+/** Decision Quorum™ — cast or update one role's vote on an incident. */
+app.put('/api/v1/incidents/:id/quorum/:role', async (c) => {
+  const { id: incidentId, role } = c.req.param()
+  const body = await c.req.json<{ state: string; note?: string; respondent_name?: string; actor?: string }>()
+  const validStates = ['pending', 'approved', 'rejected', 'abstain']
+  if (!validStates.includes(body.state)) {
+    return c.json({ error: `state must be one of ${validStates.join(', ')}` }, 400)
+  }
+  const repo = incidentRepo(c.env)
+  const incident = await repo.get(incidentId)
+  await repo.upsertQuorumVote(incidentId, role, {
+    state: body.state as any,
+    note: body.note,
+    respondent_name: body.respondent_name,
+  })
+  await repo.writeAudit({
+    organisation_id: incident.organisation_id,
+    incident_id: incidentId,
+    actor: body.actor || body.respondent_name || role,
+    action: 'quorum_vote',
+    detail: `${role}: ${body.state}`,
+  })
+  const quorum = await repo.listQuorum(incidentId)
+  return c.json({ items: quorum })
 })
 
 /** Decision Intelligence™ — severity + recommended actions */
@@ -137,6 +197,75 @@ app.post('/api/v1/incidents/:id/close', async (c) => {
   return c.json({ item })
 })
 
+/** Update any mutable field on an incident (severity, status, statement, owner, dimension, scenario, title). */
+app.patch('/api/v1/incidents/:id', async (c) => {
+  const incidentId = c.req.param('id')
+  const body = await c.req.json<{
+    title?: string
+    status?: string
+    severity?: number | null
+    dimension?: string | null
+    scenario?: string
+    owner?: string | null
+    statement?: string
+    statement_lang?: string
+    actor?: string
+  }>()
+  const validStatuses = ['open', 'monitoring', 'contained', 'closed']
+  if (body.status !== undefined && !validStatuses.includes(body.status)) {
+    return c.json({ error: `status must be one of ${validStatuses.join(', ')}` }, 400)
+  }
+  const repo = incidentRepo(c.env)
+  const before = await repo.get(incidentId)
+  const item = await repo.update(incidentId, {
+    title: body.title,
+    status: body.status as any,
+    severity: body.severity,
+    dimension: body.dimension,
+    scenario: body.scenario,
+    owner: body.owner,
+    statement: body.statement,
+    statement_lang: body.statement_lang,
+  })
+  await repo.writeAudit({
+    organisation_id: before.organisation_id,
+    incident_id: incidentId,
+    actor: body.actor || 'Operator',
+    action: 'incident.updated',
+    detail: Object.keys(body)
+      .filter((k) => k !== 'actor')
+      .join(', '),
+  })
+  return c.json({ item })
+})
+
+/**
+ * Composite read for the real frontend (src/core/api.ts): one call that
+ * assembles everything its local Incident shape needs — the incident row,
+ * its 13 First Sixty Minutes tasks, quorum votes, and audit trail — instead
+ * of the frontend hand-rolling four separate fetches.
+ */
+app.get('/api/v1/incidents/:id/full', async (c) => {
+  const incidentId = c.req.param('id')
+  const svc = new IncidentService(c.env)
+  const repo = incidentRepo(c.env)
+  const [incident, tasks, quorum, audit, obligationRows] = await Promise.all([
+    svc.get(incidentId),
+    svc.tasks(incidentId),
+    repo.listQuorum(incidentId),
+    repo.listAudit(incidentId),
+    c.env.DB.prepare(`SELECT obligation_id FROM incident_obligations WHERE incident_id = ?`)
+      .bind(incidentId)
+      .all<{ obligation_id: string }>(),
+  ])
+  const clocks: Record<string, boolean> = {}
+  for (const row of obligationRows.results ?? []) {
+    const clockId = uiClockIdForObligation(row.obligation_id)
+    if (clockId) clocks[clockId] = true
+  }
+  return c.json({ incident, tasks, quorum, audit, clocks })
+})
+
 app.post('/api/v1/severity/recommend', async (c) => {
   const body = await c.req.json()
   const svc = new IncidentService(c.env)
@@ -153,6 +282,27 @@ app.get('/api/v1/incidents/:id/tasks', async (c) => {
   const svc = new IncidentService(c.env)
   const items = await svc.tasks(c.req.param('id'))
   return c.json({ items })
+})
+
+/** Check/uncheck one First Sixty Minutes step. */
+app.patch('/api/v1/incidents/:id/tasks/:taskId', async (c) => {
+  const { id: incidentId, taskId } = c.req.param()
+  const body = await c.req.json<{ status: string; actor?: string }>()
+  const validStatuses = ['pending', 'in_progress', 'done', 'skipped']
+  if (!validStatuses.includes(body.status)) {
+    return c.json({ error: `status must be one of ${validStatuses.join(', ')}` }, 400)
+  }
+  const repo = incidentRepo(c.env)
+  const incident = await repo.get(incidentId)
+  const task = await repo.updateTaskStatus(taskId, body.status as any)
+  await repo.writeAudit({
+    organisation_id: incident.organisation_id,
+    incident_id: incidentId,
+    actor: body.actor || 'Operator',
+    action: 'first60_task_updated',
+    detail: `Langkah ${task.step_index}: "${task.title}" -> ${body.status}`,
+  })
+  return c.json({ item: task })
 })
 
 app.post('/api/v1/holding-statements', async (c) => {
