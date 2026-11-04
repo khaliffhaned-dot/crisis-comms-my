@@ -1,0 +1,172 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.5rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+
+  --primary: oklch(0.21 0.034 264.665);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.003 264.542);
+  --secondary-foreground: oklch(0.21 0.034 264.665);
+  --muted: oklch(0.967 0.003 264.542);
+  --muted-foreground: oklch(0.503 0.011 264.3);
+  --accent: oklch(0.967 0.003 264.542);
+  --accent-foreground: oklch(0.21 0.034 264.665);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: oklch(0.928 0.006 264.531);
+  --input: oklch(0.928 0.006 264.531);
+  --ring: oklch(0.584 0.172 258.3);
+
+  /* Severity scale — L1 (lowest) to L4 (highest). Never color alone: SeverityBadge
+     also varies label and an icon per .ux-profile.md's status-vocabulary rule. */
+  --severity-l1: oklch(0.6 0.13 155);
+  --severity-l1-foreground: oklch(0.985 0 0);
+  --severity-l2: oklch(0.68 0.16 85);
+  --severity-l2-foreground: oklch(0.145 0 0);
+  --severity-l3: oklch(0.65 0.19 45);
+  --severity-l3-foreground: oklch(0.145 0 0);
+  --severity-l4: oklch(0.577 0.245 27.325);
+  --severity-l4-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.6 0.13 155);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.68 0.16 85);
+  --warning-foreground: oklch(0.145 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+
+  --primary: oklch(0.72 0.14 258.3);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.145 0 0);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.6 0.15 258.3);
+
+  --severity-l1: oklch(0.65 0.14 155);
+  --severity-l1-foreground: oklch(0.145 0 0);
+  --severity-l2: oklch(0.75 0.16 85);
+  --severity-l2-foreground: oklch(0.145 0 0);
+  --severity-l3: oklch(0.7 0.19 45);
+  --severity-l3-foreground: oklch(0.145 0 0);
+  --severity-l4: oklch(0.704 0.191 22.216);
+  --severity-l4-foreground: oklch(0.145 0 0);
+
+  --success: oklch(0.65 0.14 155);
+  --success-foreground: oklch(0.145 0 0);
+  --warning: oklch(0.75 0.16 85);
+  --warning-foreground: oklch(0.145 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-severity-l1: var(--severity-l1);
+  --color-severity-l1-foreground: var(--severity-l1-foreground);
+  --color-severity-l2: var(--severity-l2);
+  --color-severity-l2-foreground: var(--severity-l2-foreground);
+  --color-severity-l3: var(--severity-l3);
+  --color-severity-l3-foreground: var(--severity-l3-foreground);
+  --color-severity-l4: var(--severity-l4);
+  --color-severity-l4-foreground: var(--severity-l4-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+/* Reduced motion — honored globally rather than per-component, since the
+   Drawer (vaul) and tw-animate-css transitions used by Sheet/Drawer don't
+   disable themselves for this on their own. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print stylesheet for the BoardBrief "Generate PDF" action — a real
+   browser print-to-PDF export, not a stub. Everything outside
+   [data-print-root] is hidden; the brief renders full-width with print-safe
+   colors. See components/BoardBriefCard.tsx. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  [data-print-root],
+  [data-print-root] * {
+    visibility: visible;
+  }
+  [data-print-root] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+}
