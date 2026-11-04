@@ -294,15 +294,18 @@ export async function saveIncident(incident: Incident): Promise<Incident> {
 
 export async function createIncident(title: string, actor = 'Operator'): Promise<Incident> {
   const base = apiBase()
+  const buildCommit = __BUILD_INFO__.commit
+  const buildVersion = /^[a-f0-9]{7,40}$/i.test(buildCommit) ? buildCommit.slice(0, 7) : undefined
   if (base) {
     const payload = (await requestJson('/api/v1/incidents', {
       method: 'POST',
-      body: JSON.stringify({ organisation_id: orgId(), title, actor }),
+      body: JSON.stringify({ organisation_id: orgId(), title, actor, app_version: buildVersion }),
     })) as { item: { id: string } }
     return fetchFull(payload.item.id)
   }
 
-  const incident = appendAudit(newIncident({ title }), actor, 'Incident created', title)
+  const detail = buildVersion ? `${title} · build ${buildVersion}` : title
+  const incident = appendAudit(newIncident({ title }), actor, 'Incident created', detail)
   return saveIncident(incident)
 }
 
@@ -351,4 +354,3 @@ export async function generateHoldingStatement(opts: {
 }
 
 export { wsBase, apiBase }
-

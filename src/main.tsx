@@ -4,6 +4,7 @@ import './theme.css'
 import './index.css'
 import './landing-light.css'
 import './modules.css'
+import './build-info.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
