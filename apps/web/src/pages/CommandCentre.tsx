@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ActionBanner } from '@/components/ActionBanner'
+import { PresenceIndicator } from '@/components/PresenceIndicator'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateView'
 import { QuorumCard } from '@/components/QuorumCard'
 import { ReadinessCard } from '@/components/ReadinessCard'
@@ -19,7 +20,7 @@ import { useIncident } from '@/lib/useIncident'
  * Purpose: a CEO opens the app and gets situation awareness in 10 seconds.
  */
 export function CommandCentre({ onActiveIncident }: { onActiveIncident: (id: string | null) => void }) {
-  const { loading, error, payload, refresh } = useIncident()
+  const { loading, error, payload, refresh, presence } = useIncident()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -41,9 +42,12 @@ export function CommandCentre({ onActiveIncident }: { onActiveIncident: (id: str
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-foreground text-xl font-bold tracking-tight">Crisis Command Centre</h1>
-        <p className="text-muted-foreground text-sm">{payload.incident.id}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-foreground text-xl font-bold tracking-tight">Crisis Command Centre</h1>
+          <p className="text-muted-foreground text-sm">{payload.incident.id}</p>
+        </div>
+        <PresenceIndicator presence={presence} className="pt-1" />
       </div>
 
       <ActionBanner quorum={payload.quorum} tasks={payload.tasks} />

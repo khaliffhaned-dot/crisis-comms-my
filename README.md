@@ -136,15 +136,15 @@ If the API is unreachable, Decision Intelligence falls back to the local rules e
 ```text
 escalate_crisisintel/
 ├── src/              # Command Centre UI (Pages) — Vite + React + TS
-├── worker/           # War-room Durable Objects Worker (escalate-my-war-room)
+├── apps/web/          # Lean 3-screen sales prototype — Vite + React + shadcn/ui
 ├── mcp-server/        # MCP tools for agents (escalate-my-mcp)
 ├── api/               # Crisis Intelligence API — pnpm workspace
-│   ├── apps/api/       # Hono API (escalate-my-api)
+│   ├── apps/api/       # Hono API (escalate-my-api) — also hosts the
+│   │                     IncidentRoom Durable Object (see WAR-ROOM.md)
 │   ├── packages/        # shared, incidents, regulatory, boardbrief
 │   ├── infrastructure/  # D1 migrations, wrangler config
 │   └── docs/             # Brand, positioning, architecture, modules
-├── wrangler.toml       # Pages config (this repo's root deploy)
-└── wrangler.worker.toml # War-room Worker config
+└── wrangler.toml       # Pages config (this repo's root deploy)
 ```
 
 ---
@@ -183,7 +183,7 @@ npm run build
 npx wrangler pages deploy dist --project-name escalate-crisis-intel
 ```
 
-Deploy API: `cd api && pnpm deploy:api` · Deploy MCP: `cd mcp-server && npm run deploy` · Deploy war-room: `npx wrangler deploy --config wrangler.worker.toml`
+Deploy API (includes the IncidentRoom Durable Object): `cd api && pnpm deploy:api` · Deploy MCP: `cd mcp-server && npm run deploy`
 
 ---
 

@@ -22,6 +22,30 @@ import {
   type ObligationRow,
 } from '@escalate-my/regulatory'
 import { generateAndStoreBrief, buildBoardInsights } from '@escalate-my/boardbrief'
+import { IncidentRoom } from './incidentRoom'
+
+export { IncidentRoom }
+
+/**
+ * Tells the incident's IncidentRoom Durable Object that something changed,
+ * so it can relay a lightweight "refetch" push to connected WebSocket
+ * clients (live collaboration — see incidentRoom.ts for why the DO itself
+ * holds no incident data). D1 is already the source of truth and the
+ * mutation that triggered this has already committed by the time this
+ * runs; a DO that's unreachable (cold start race, transient error) must
+ * never fail the request that already succeeded — best-effort only.
+ */
+function broadcastIncidentUpdate(env: Env, incidentId: string, reason: string): Promise<void> {
+  const stub = env.INCIDENT_ROOM.get(env.INCIDENT_ROOM.idFromName(incidentId))
+  return stub
+    .fetch('https://incident-room/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ incidentId, reason }),
+    })
+    .then(() => undefined)
+    .catch(() => undefined)
+}
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -107,6 +131,7 @@ app.post('/api/v1/incidents/:id/clocks/:clockId/toggle', async (c) => {
     action: body.active ? 'regulatory_clock_started' : 'regulatory_clock_stopped',
     detail: clockId,
   })
+  c.executionCtx.waitUntil(broadcastIncidentUpdate(c.env, incidentId, 'clock_toggled'))
   return c.json({ ok: true })
 })
 
@@ -152,6 +177,7 @@ app.put('/api/v1/incidents/:id/quorum/:role', async (c) => {
     detail: `${role}: ${body.state}`,
   })
   const quorum = await repo.listQuorum(incidentId)
+  c.executionCtx.waitUntil(broadcastIncidentUpdate(c.env, incidentId, 'quorum_vote'))
   return c.json({ items: quorum })
 })
 
@@ -260,6 +286,7 @@ app.patch('/api/v1/incidents/:id', async (c) => {
       .filter((k) => k !== 'actor')
       .join(', '),
   })
+  c.executionCtx.waitUntil(broadcastIncidentUpdate(c.env, incidentId, 'incident_updated'))
   return c.json({ item })
 })
 
@@ -288,6 +315,27 @@ app.get('/api/v1/incidents/:id/full', async (c) => {
     if (clockId) clocks[clockId] = true
   }
   return c.json({ incident, tasks, quorum, audit, clocks })
+})
+
+/**
+ * Live collaboration — upgrades to a WebSocket on this incident's
+ * IncidentRoom Durable Object. Presence + "something changed, refetch"
+ * pushes only; clients still read real data from GET .../full. See
+ * incidentRoom.ts for why.
+ */
+app.get('/api/v1/incidents/:id/live', async (c) => {
+  const incidentId = c.req.param('id')
+  const stub = c.env.INCIDENT_ROOM.get(c.env.INCIDENT_ROOM.idFromName(incidentId))
+  const url = new URL(c.req.url)
+  url.searchParams.set('room', incidentId)
+  // A verified Access identity overrides whatever ?name= the client sent —
+  // otherwise presence is exactly as spoofable as the old actor fields were
+  // before resolveIdentity existed. Falls back to the client's own value
+  // when Access isn't enabled yet, same degrade-gracefully pattern as
+  // everywhere else.
+  const identity = await resolveIdentity(c.executionCtx)
+  if (identity.actor) url.searchParams.set('name', identity.actor)
+  return stub.fetch(new Request(url, c.req.raw))
 })
 
 app.post('/api/v1/severity/recommend', async (c) => {
@@ -327,6 +375,7 @@ app.patch('/api/v1/incidents/:id/tasks/:taskId', async (c) => {
     action: 'first60_task_updated',
     detail: `Langkah ${task.step_index}: "${task.title}" -> ${body.status}`,
   })
+  c.executionCtx.waitUntil(broadcastIncidentUpdate(c.env, incidentId, 'task_updated'))
   return c.json({ item: task })
 })
 

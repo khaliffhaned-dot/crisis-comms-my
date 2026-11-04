@@ -80,3 +80,11 @@ export interface Identity {
   email: string | null
   verified: boolean
 }
+
+/** One connected operator, from the IncidentRoom Durable Object's presence
+ * push (see WAR-ROOM.md) — not persisted anywhere, purely in-memory. */
+export interface PresenceEntry {
+  id: string
+  name: string
+  joinedAt: number
+}
