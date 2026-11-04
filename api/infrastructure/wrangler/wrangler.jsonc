@@ -29,6 +29,11 @@
       { "name": "INCIDENT_ROOM", "class_name": "IncidentRoom" }
     ]
   },
+  // Powers AI-assisted holding-statement drafting (api/packages/incidents/src/holding.ts).
+  // Always has a deterministic template fallback — this binding is additive, not required.
+  "ai": {
+    "binding": "AI"
+  },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["IncidentRoom"] }
   ],

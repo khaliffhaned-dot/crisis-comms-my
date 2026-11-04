@@ -111,6 +111,10 @@ export interface Env {
   CONFIG: KVNamespace
   REPORTS: R2Bucket
   INCIDENT_ROOM: DurableObjectNamespace
+  /** Optional — every AI-assisted path degrades to its deterministic
+   * fallback (rules engine / template) when this binding isn't configured,
+   * same pattern as everywhere else in this API. */
+  AI?: Ai
   APP_NAME: string
   API_VERSION: string
 }

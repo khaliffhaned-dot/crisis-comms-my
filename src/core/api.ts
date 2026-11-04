@@ -318,4 +318,42 @@ export function backendMode(): 'api' | 'war-room' | 'local' {
   return 'local'
 }
 
+export interface HoldingStatementResult {
+  en?: string
+  bm?: string
+  disclaimer: string
+  source: 'template' | 'workers-ai' | 'local'
+}
+
+/**
+ * Real backend call (api/apps/api/src/index.ts -> POST /api/v1/holding-statements),
+ * which itself AI-drafts via Workers AI when that binding is configured and
+ * falls back to its own deterministic template otherwise — see
+ * api/packages/incidents/src/holding.ts. Only when no backend is configured
+ * at all (VITE_LOCAL_ONLY demo mode) does this fall back to a generic local
+ * placeholder, since there is nothing to call.
+ */
+export async function generateHoldingStatement(opts: {
+  scenario: string
+  company: string
+  issue: string
+  lang: 'en' | 'bm' | 'both'
+  facts?: string
+}): Promise<HoldingStatementResult> {
+  if (apiBase()) {
+    return (await requestJson('/api/v1/holding-statements', {
+      method: 'POST',
+      body: JSON.stringify(opts),
+    })) as HoldingStatementResult
+  }
+  const disclaimer = 'Local demo mode — no backend configured. Not a real draft.'
+  const line = (lang: 'en' | 'bm') =>
+    lang === 'bm'
+      ? `${opts.company} sedang menyiasat laporan mengenai ${opts.issue}. Kenyataan lanjut akan dikeluarkan sebaik maklumat disahkan.`
+      : `${opts.company} is investigating reports concerning ${opts.issue}. A further statement will follow once information is verified.`
+  if (opts.lang === 'en') return { en: line('en'), disclaimer, source: 'local' }
+  if (opts.lang === 'bm') return { bm: line('bm'), disclaimer, source: 'local' }
+  return { en: line('en'), bm: line('bm'), disclaimer, source: 'local' }
+}
+
 export { wsBase, apiBase }

@@ -385,16 +385,19 @@ app.post('/api/v1/holding-statements', async (c) => {
     company: string
     issue: string
     lang?: 'en' | 'bm' | 'both'
+    /** Extra situational detail — sharpens the AI draft when the AI binding
+     * is configured; ignored by the deterministic template fallback. */
+    facts?: string
   }>()
   const svc = new IncidentService(c.env)
-  return c.json(
-    svc.holding({
-      scenario: body.scenario || 'operational',
-      company: body.company || 'Company',
-      issue: body.issue || '[issue]',
-      lang: body.lang || 'both',
-    })
-  )
+  const result = await svc.holding({
+    scenario: body.scenario || 'operational',
+    company: body.company || 'Company',
+    issue: body.issue || '[issue]',
+    lang: body.lang || 'both',
+    facts: body.facts,
+  })
+  return c.json(result)
 })
 
 app.post('/api/v1/reports/board-brief', async (c) => {
