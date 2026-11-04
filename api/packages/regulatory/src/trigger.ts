@@ -89,3 +89,33 @@ export async function escalateObligation(db: D1Database, incidentObligationId: s
     .bind(at, incidentObligationId)
     .run()
 }
+
+/**
+ * Start tracking one specific obligation against one incident — the manual
+ * "start this clock" path (as opposed to trackObligations' fact-matched
+ * bulk path). Idempotent: starting an already-tracked obligation is a no-op.
+ */
+export async function startObligationTracking(db: D1Database, incidentId: string, obligationId: string): Promise<void> {
+  const catalog = await db
+    .prepare(`SELECT deadline_hours FROM regulatory_obligations WHERE id = ?`)
+    .bind(obligationId)
+    .first<{ deadline_hours: number | null }>()
+  const now = nowIso()
+  const deadlineAt = typeof catalog?.deadline_hours === 'number' ? addHoursIso(catalog.deadline_hours) : null
+  await db
+    .prepare(
+      `INSERT INTO incident_obligations (id, incident_id, obligation_id, match_score, triggered_at, deadline_at, status, created_at)
+       VALUES (?, ?, ?, 100, ?, ?, 'pending', ?)
+       ON CONFLICT(incident_id, obligation_id) DO NOTHING`
+    )
+    .bind(id('IOB'), incidentId, obligationId, now, deadlineAt, now)
+    .run()
+}
+
+/** Stop tracking (remove) an obligation from an incident — the manual "un-start this clock" path. */
+export async function stopObligationTracking(db: D1Database, incidentId: string, obligationId: string): Promise<void> {
+  await db
+    .prepare(`DELETE FROM incident_obligations WHERE incident_id = ? AND obligation_id = ?`)
+    .bind(incidentId, obligationId)
+    .run()
+}
