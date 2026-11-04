@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { generateBoardBrief } from '@/lib/api'
 import { severityMeta } from '@/lib/format'
 import type { ApiQuorumRow, ApiTask, FullIncidentPayload } from '@/lib/types'
+import { useCurrentActor } from '@/lib/useIdentity'
 
 function impactLine(payload: FullIncidentPayload): string {
   const meta = severityMeta(payload.incident.severity)
@@ -37,6 +38,7 @@ function outstanding(quorum: ApiQuorumRow[]): ApiQuorumRow[] {
 export function BoardBriefCard({ payload, incidentId }: { payload: FullIncidentPayload; incidentId: string }) {
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const actor = useCurrentActor()
 
   const done = actionsTaken(payload.tasks)
   const pendingVotes = outstanding(payload.quorum)
@@ -45,7 +47,7 @@ export function BoardBriefCard({ payload, incidentId }: { payload: FullIncidentP
     setPending(kind)
     setError(null)
     try {
-      await generateBoardBrief(incidentId, kind)
+      await generateBoardBrief(incidentId, kind, actor)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not generate the brief.')
     } finally {

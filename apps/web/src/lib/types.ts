@@ -74,6 +74,13 @@ export type BriefKind =
   | 'chairman_brief'
   | 'post_incident_review'
 
+/** Who the backend resolved the caller to be, per Cloudflare Access (GET /api/v1/me). */
+export interface Identity {
+  actor: string | null
+  email: string | null
+  verified: boolean
+}
+
 /** One connected operator, from the IncidentRoom Durable Object's presence
  * push (see WAR-ROOM.md) — not persisted anywhere, purely in-memory. */
 export interface PresenceEntry {

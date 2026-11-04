@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { getIncidentFull, liveIncidentUrl, listIncidents } from './api'
 import type { FullIncidentPayload, PresenceEntry } from './types'
+import { useCurrentActor } from './useIdentity'
 
 interface IncidentState {
   loading: boolean
@@ -34,6 +35,7 @@ export function useIncident(incidentId?: string): IncidentState {
   const [payload, setPayload] = useState<FullIncidentPayload | null>(null)
   const [presence, setPresence] = useState<PresenceEntry[]>([])
   const [tick, setTick] = useState(0)
+  const actor = useCurrentActor()
 
   // Stable identity (empty deps) — safe to use directly inside the live
   // WebSocket effect below without forcing it to reconnect on every render.
@@ -90,7 +92,7 @@ export function useIncident(incidentId?: string): IncidentState {
 
     function connect() {
       if (closed || !resolvedId) return
-      ws = new WebSocket(liveIncidentUrl(resolvedId, 'Operator'))
+      ws = new WebSocket(liveIncidentUrl(resolvedId, actor))
 
       ws.onopen = () => {
         reconnectAttempt = 0
@@ -130,7 +132,7 @@ export function useIncident(incidentId?: string): IncidentState {
         /* ignore */
       }
     }
-  }, [resolvedId, refresh])
+  }, [resolvedId, refresh, actor])
 
   return { loading, error, payload, refresh, presence }
 }

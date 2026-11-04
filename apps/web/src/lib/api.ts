@@ -1,4 +1,4 @@
-import type { ApiQuorumRow, ApiTask, BoardBriefResult, BriefKind, FullIncidentPayload } from './types'
+import type { ApiQuorumRow, ApiTask, BoardBriefResult, BriefKind, FullIncidentPayload, Identity } from './types'
 
 const PROD_API = 'https://escalate-my-api.khaliffhaned.workers.dev'
 const DEFAULT_ORG_ID = 'org_default'
@@ -41,6 +41,16 @@ export async function listIncidents(): Promise<{ id: string }[]> {
 
 export async function getIncidentFull(id: string): Promise<FullIncidentPayload> {
   return requestJson<FullIncidentPayload>(`/api/v1/incidents/${encodeURIComponent(id)}/full`)
+}
+
+/**
+ * Who Cloudflare Access says the caller is (api/packages/shared/src/identity.ts).
+ * `verified: false` means Access isn't enabled on this route yet — `actor`
+ * is then null and callers should fall back to a generic label, same as
+ * before this existed.
+ */
+export async function getMe(): Promise<Identity> {
+  return requestJson<Identity>('/api/v1/me')
 }
 
 /** WebSocket URL for live presence + update pushes on one incident (see

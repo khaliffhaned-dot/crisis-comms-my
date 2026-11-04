@@ -10,7 +10,20 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer'
+import { useCurrentActor } from '@/lib/useIdentity'
 import { cn } from '@/lib/utils'
+
+function initials(name: string): string {
+  return (
+    name
+      .split(' ')
+      .map((part) => part[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?'
+  )
+}
 
 /**
  * Exactly 5 tabs, per the product brief: no Analytics, no Charts, no
@@ -32,6 +45,7 @@ export function AppShell({ activeIncidentId, children }: { activeIncidentId: str
   const location = useLocation()
   const navigate = useNavigate()
   const items = navItems(activeIncidentId)
+  const actor = useCurrentActor()
 
   function isActive(href: string) {
     const path = href.split('#')[0]
@@ -72,6 +86,16 @@ export function AppShell({ activeIncidentId, children }: { activeIncidentId: str
               BoardBrief
             </Link>
           </nav>
+
+          <div className="hidden items-center gap-2 md:flex" title={actor}>
+            <span
+              className="bg-secondary text-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+              aria-hidden="true"
+            >
+              {initials(actor)}
+            </span>
+            <span className="text-muted-foreground max-w-28 truncate text-sm font-medium">{actor}</span>
+          </div>
         </div>
       </header>
 

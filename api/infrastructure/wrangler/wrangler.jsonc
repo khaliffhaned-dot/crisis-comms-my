@@ -36,6 +36,21 @@
     "APP_NAME": "Escalate MY",
     "API_VERSION": "v1"
   },
+  // Simulates a Cloudflare Access-verified identity for `wrangler dev` only —
+  // this block is never read in production. There, `ctx.access` is populated
+  // for real once Access is enabled on this Worker's route (Workers & Pages
+  // dashboard -> escalate-my-api -> Settings -> Domains & Routes -> Enable
+  // Cloudflare Access), with an identity provider and Allow policy configured
+  // under Zero Trust -> Access. See api/apps/api/src/../../packages/shared/src/identity.ts.
+  "access": {
+    "dev": {
+      "aud": "escalate-my-api-dev",
+      "identity": {
+        "email": "dev@escalate.my",
+        "name": "Local Developer"
+      }
+    }
+  },
   "triggers": {
     "crons": ["*/30 * * * *", "*/5 * * * *"]
   },
