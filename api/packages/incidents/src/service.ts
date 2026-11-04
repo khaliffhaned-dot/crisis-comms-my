@@ -6,6 +6,14 @@ import {
 } from '@escalate-my/shared'
 import { first60Checklist } from './first60'
 import { draftHoldingStatement, type DraftHoldingStatementInput } from './holding'
+import {
+  listApprovedResponseTypes,
+  renderApprovedResponse,
+  isoDateOnly,
+  type ApprovedResponseType,
+  type ApprovedResponseFields,
+  type Audience,
+} from './approvedResponses'
 import { incidentRepo } from './repository'
 
 export class IncidentService {
@@ -75,5 +83,42 @@ export class IncidentService {
 
   holding(opts: DraftHoldingStatementInput) {
     return draftHoldingStatement(this.env, opts)
+  }
+
+  approvedResponseTypes(audience?: Audience) {
+    return listApprovedResponseTypes(audience)
+  }
+
+  /**
+   * Approved Responses™ — deterministic, pre-vetted statement fill, never
+   * AI-touched (see approvedResponses.ts header). Pulls the incident's real
+   * title/date, and for the Crisis Update template derives up to 3 action
+   * bullets from the most recently completed First 60 Minutes tasks instead
+   * of inventing them — any slot without a real completed task keeps its
+   * literal [ACTION n] / [TINDAKAN n] placeholder.
+   */
+  async approvedResponse(opts: {
+    incidentId: string
+    type: ApprovedResponseType
+    lang: 'en' | 'bm' | 'both'
+    company: string
+    productName?: string
+  }) {
+    const incident = await this.repo().get(opts.incidentId)
+    const tasks = await this.repo().listTasks(opts.incidentId)
+    const actions = tasks
+      .filter((t) => t.status === 'done' && !!t.completed_at)
+      .sort((a, b) => (b.completed_at! > a.completed_at! ? 1 : -1))
+      .slice(0, 3)
+      .map((t) => t.title) as [string?, string?, string?]
+
+    const fields: ApprovedResponseFields = {
+      organisationName: opts.company,
+      incidentSummary: incident.title,
+      date: isoDateOnly(incident.created_at),
+      productName: opts.productName,
+      actions,
+    }
+    return renderApprovedResponse(opts.type, opts.lang, fields)
   }
 }
