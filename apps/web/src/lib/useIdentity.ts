@@ -23,13 +23,13 @@ export function useCurrentActor(): string {
   useEffect(() => {
     if (cached) return
     if (!inflight) inflight = getMe().catch(() => FALLBACK)
-    let active = true
+    const active = { current: true }
     inflight.then((resolved) => {
       cached = resolved
-      if (active) setIdentity(resolved)
+      if (active.current) setIdentity(resolved)
     })
     return () => {
-      active = false
+      active.current = false
     }
   }, [])
 

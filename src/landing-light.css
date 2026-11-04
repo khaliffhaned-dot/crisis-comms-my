@@ -1,4 +1,7 @@
-/* Escalate MY — landing page (enterprise neutral + blue accent) */
+/* Escalate MY — landing page (enterprise neutral + brand red accent).
+   Was blue (#2563eb) — the only surface in the product not using the red
+   brand family shared by theme.css/index.css/apps/web and PRVAIL/
+   commintelligence, the platform this red was confirmed against. */
 
 .landing--ent {
   --ent-bg: #ffffff;
@@ -9,10 +12,10 @@
   --ent-ink: #0f172a;
   --ent-ink-body: #475569;
   --ent-ink-muted: #64748b;
-  --ent-accent: #2563eb;
-  --ent-accent-hover: #1d4ed8;
-  --ent-accent-soft: #eff6ff;
-  --ent-accent-soft-border: #bfdbfe;
+  --ent-accent: #c81e1e;
+  --ent-accent-hover: #a21919;
+  --ent-accent-soft: #fef2f2;
+  --ent-accent-soft-border: #fecaca;
   --ent-success: #16a34a;
   --ent-dark: #0f172a;
   --ent-dark-surface: #1e293b;
@@ -320,8 +323,16 @@
   letter-spacing: -0.01em;
   color: var(--ent-ink);
 }
+/* Gradient text, reserved for this one hero emphasis phrase only — not a
+   decorative wash on a surface or CTA. Brand red through to a warm amber,
+   the same two-tone-emphasis idea PRVAIL/commintelligence uses on its own
+   hero headline, kept inside this product's own red/warm palette rather
+   than copying its literal pink/orange/yellow stops. */
 .ent-h1__accent {
-  color: var(--ent-accent);
+  background: linear-gradient(90deg, var(--ent-accent) 0%, #f97316 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 .ent-lead {
   margin: 20px 0 0;

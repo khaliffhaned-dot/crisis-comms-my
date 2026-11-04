@@ -13,7 +13,12 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
 
-  --primary: oklch(0.21 0.034 264.665);
+  /* Primary accent is the MK brand manual's "wine" (.ux-profile.md) —
+     #7a1e3e, 10.1:1 contrast with white. Resolves the long-standing
+     src/theme.css vs. index.css token conflict (#dc2626 vs #c81e1e,
+     neither matching the documented canonical value) by giving apps/web
+     the one correct value from the start. */
+  --primary: oklch(0.395 0.128 4.2);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.967 0.003 264.542);
   --secondary-foreground: oklch(0.21 0.034 264.665);
@@ -27,7 +32,12 @@
 
   --border: oklch(0.928 0.006 264.531);
   --input: oklch(0.928 0.006 264.531);
-  --ring: oklch(0.584 0.172 258.3);
+  /* Focus ring matches the brand accent, per .ux-profile.md's
+     2px wine :focus-visible rule. */
+  --ring: oklch(0.395 0.128 4.2);
+
+  /* Stripe-style layered card shadow, per .ux-profile.md's elevation spec. */
+  --shadow-card-raw: 0 1px 2px rgba(20, 20, 20, 0.04), 0 2px 10px rgba(20, 20, 20, 0.06);
 
   /* Severity scale — L1 (lowest) to L4 (highest). Never color alone: SeverityBadge
      also varies label and an icon per .ux-profile.md's status-vocabulary rule. */
@@ -54,7 +64,10 @@
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.72 0.14 258.3);
+  /* Same wine hue (4.2), lightened for a dark surface — not the brand's
+     reserved "signal" red, which .ux-profile.md keeps for a single urgent
+     element only, never a general accent. */
+  --primary: oklch(0.62 0.15 4.2);
   --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -68,7 +81,12 @@
 
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.6 0.15 258.3);
+  --ring: oklch(0.62 0.15 4.2);
+
+  /* Edge lighting, not an outer glow — colour-palette's dark-mode rule.
+     An outer black shadow is nearly invisible on a dark canvas anyway; a
+     top inset highlight is what actually reads as "raised" here. */
+  --shadow-card-raw: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
   --severity-l1: oklch(0.65 0.14 155);
   --severity-l1-foreground: oklch(0.145 0 0);
@@ -105,6 +123,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --shadow-card: var(--shadow-card-raw);
 
   --color-severity-l1: var(--severity-l1);
   --color-severity-l1-foreground: var(--severity-l1-foreground);

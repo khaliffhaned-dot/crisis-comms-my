@@ -11,10 +11,16 @@
   --border-color: #e5e5e0;
   --border-strong: #d4d4d0;
 
-  --primary: #dc2626;
-  --primary-hover: #b91c1c;
+  /* #c81e1e, not #dc2626: this file is imported before index.css in
+     main.tsx, so index.css's competing --primary (#c81e1e) always won in
+     the browser — this value never actually rendered. #c81e1e also
+     matches PRVAIL/commintelligence's own --primary exactly, confirming
+     it (not #dc2626) is the real brand red in use. Single canonical value
+     now; index.css no longer needs its own --primary declaration. */
+  --primary: #c81e1e;
+  --primary-hover: #a21919;
   --primary-soft: #fef2f2;
-  --primary-ring: rgba(220, 38, 38, 0.25);
+  --primary-ring: rgba(200, 30, 30, 0.25);
 
   --navy: #18181b;
   --text-primary: #18181b;
@@ -28,7 +34,7 @@
   --info: #2563eb;
   --danger: #dc2626;
 
-  --saffron: #dc2626;
+  --saffron: #c81e1e;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);

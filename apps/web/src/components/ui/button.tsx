@@ -5,7 +5,8 @@ import type * as React from 'react'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+  // Pill-shaped per .ux-profile.md ("buttons fully pill-shaped, border-radius: 9999px").
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
   {
     variants: {
       variant: {
@@ -20,8 +21,8 @@ const buttonVariants = cva(
       },
       size: {
         default: 'h-11 px-4 py-2 has-[>svg]:px-3',
-        sm: 'h-9 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5',
-        lg: 'h-11 rounded-md px-6 has-[>svg]:px-4',
+        sm: 'h-9 gap-1.5 px-3 has-[>svg]:px-2.5',
+        lg: 'h-11 px-6 has-[>svg]:px-4',
         icon: 'size-11',
       },
     },
