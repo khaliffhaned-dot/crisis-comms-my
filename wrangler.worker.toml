@@ -11,11 +11,6 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["IncidentRoom"]
 
-[observability]
-enabled = false
-head_sampling_rate = 1
-redact_query_string = false
-
 [observability.logs]
 enabled = true
 head_sampling_rate = 1
@@ -26,9 +21,6 @@ persist = true
 enabled = true
 head_sampling_rate = 1
 persist = true
-
-[observability.issue_detection]
-enabled = true
 
 [[d1_databases]]
 binding = "DB"
