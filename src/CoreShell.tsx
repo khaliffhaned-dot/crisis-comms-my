@@ -115,6 +115,7 @@ export default function CoreShell() {
   const [approvedResult, setApprovedResult] = useState<ApprovedResponseResult | null>(null)
   const [orgSettingsSaving, setOrgSettingsSaving] = useState(false)
   const [orgSettingsSavedAt, setOrgSettingsSavedAt] = useState<number | null>(null)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
   const backend = backendMode()
   const t = useCallback((en: string, bm: string) => (lang === 'bm' ? bm : en), [lang])
 
@@ -134,6 +135,28 @@ export default function CoreShell() {
       .then((settings) => setOrgName(settings.name))
       .catch(() => {})
   }, [])
+
+  // Switching incidents must not leave a previous incident's generated
+  // draft or product-recall product name sitting on screen looking like it
+  // belongs to the newly active one. Organisation name, audience filter and
+  // response type are sticky user preferences, not incident-bound, so they
+  // deliberately survive the switch.
+  useEffect(() => {
+    setStatementMeta(null)
+    setApprovedResult(null)
+    setProductName('')
+  }, [activeId])
+
+  const copyText = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField((f) => (f === field ? null : f)), 1500)
+    } catch {
+      // Clipboard API unavailable (no HTTPS context, permission denied) —
+      // nothing actionable to surface mid-draft, so fail silently.
+    }
+  }
 
   const saveOrgName = async () => {
     if (orgSettingsSaving) return
@@ -424,6 +447,9 @@ export default function CoreShell() {
                 <div className="form-row">
                   <label>{t('Organisation name', 'Nama organisasi')}</label>
                   <input value={orgName} onChange={(e) => { setOrgName(e.target.value); setOrgSettingsSavedAt(null) }} />
+                  {!orgName.trim() && (
+                    <p className="stmt-hint">{t('Required to generate a draft', 'Diperlukan untuk menjana draf')}</p>
+                  )}
                   {backend === 'api' && (
                     <div className="btn-row" style={{ marginTop: '0.4rem' }}>
                       <button type="button" className="btn btn-secondary" onClick={saveOrgName} disabled={orgSettingsSaving}>
@@ -448,7 +474,7 @@ export default function CoreShell() {
                 </div>
               </div>
               <div className="btn-row">
-                <button type="button" className="btn btn-primary" onClick={generateStatement} disabled={statementBusy}>
+                <button type="button" className="btn btn-primary" onClick={generateStatement} disabled={statementBusy || !orgName.trim()}>
                   {statementBusy ? t('Generating…', 'Menjana…') : t('Generate draft', 'Jana draf')}
                 </button>
                 {statementMeta?.source === 'workers-ai' && (
@@ -458,6 +484,13 @@ export default function CoreShell() {
               <div className="form-row" style={{ marginTop: '1rem' }}>
                 <label>{t('Draft', 'Draf')}</label>
                 <textarea rows={10} value={active.statement} onChange={(e) => patchActive((inc) => ({ ...inc, statement: e.target.value }))} />
+                {active.statement && (
+                  <div className="btn-row" style={{ marginTop: '0.4rem' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => copyText(active.statement, 'holding')}>
+                      {copiedField === 'holding' ? t('Copied', 'Disalin') : t('Copy', 'Salin')}
+                    </button>
+                  </div>
+                )}
                 <p className="stmt-hint">
                   {statementMeta?.disclaimer ||
                     t(
@@ -508,7 +541,7 @@ export default function CoreShell() {
                 )}
               </div>
               <div className="btn-row">
-                <button type="button" className="btn btn-primary" onClick={generateApproved} disabled={approvedBusy}>
+                <button type="button" className="btn btn-primary" onClick={generateApproved} disabled={approvedBusy || !orgName.trim()}>
                   {approvedBusy ? t('Generating…', 'Menjana…') : t('Generate approved draft', 'Jana draf diluluskan')}
                 </button>
               </div>
@@ -520,6 +553,11 @@ export default function CoreShell() {
                     value={approvedResult.en}
                     onChange={(e) => setApprovedResult((prev) => (prev ? { ...prev, en: e.target.value } : prev))}
                   />
+                  <div className="btn-row" style={{ marginTop: '0.4rem' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => copyText(approvedResult.en || '', 'approved-en')}>
+                      {copiedField === 'approved-en' ? t('Copied', 'Disalin') : t('Copy', 'Salin')}
+                    </button>
+                  </div>
                 </div>
               )}
               {approvedResult?.bm && (
@@ -530,6 +568,11 @@ export default function CoreShell() {
                     value={approvedResult.bm}
                     onChange={(e) => setApprovedResult((prev) => (prev ? { ...prev, bm: e.target.value } : prev))}
                   />
+                  <div className="btn-row" style={{ marginTop: '0.4rem' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => copyText(approvedResult.bm || '', 'approved-bm')}>
+                      {copiedField === 'approved-bm' ? t('Copied', 'Disalin') : t('Copy', 'Salin')}
+                    </button>
+                  </div>
                 </div>
               )}
               {approvedResult && (
