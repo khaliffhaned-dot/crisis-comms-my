@@ -582,6 +582,34 @@ app.post('/api/v1/holding-statements', async (c) => {
   return c.json(result)
 })
 
+app.get('/api/v1/approved-responses/types', async (c) => {
+  const audience = c.req.query('audience') as any
+  const svc = new IncidentService(c.env)
+  return c.json({ items: svc.approvedResponseTypes(audience) })
+})
+
+app.post('/api/v1/approved-responses', async (c) => {
+  const body = await c.req.json<{
+    incident_id: string
+    type: string
+    lang?: 'en' | 'bm' | 'both'
+    company: string
+    product_name?: string
+  }>()
+  if (!body.incident_id || !body.type || !body.company) {
+    return c.json({ error: 'incident_id, type and company required' }, 400)
+  }
+  const svc = new IncidentService(c.env)
+  const result = await svc.approvedResponse({
+    incidentId: body.incident_id,
+    type: body.type as any,
+    lang: body.lang || 'both',
+    company: body.company,
+    productName: body.product_name,
+  })
+  return c.json(result)
+})
+
 app.post('/api/v1/reports/board-brief', async (c) => {
   const body = await c.req.json<{ incident_id: string; kind?: string; actor?: string }>()
   if (!body.incident_id) return c.json({ error: 'incident_id required' }, 400)

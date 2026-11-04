@@ -16,7 +16,9 @@ import {
   appendAudit,
   backendMode,
   generateHoldingStatement,
+  generateApprovedResponse,
   type HoldingStatementResult,
+  type ApprovedResponseResult,
 } from './core/api'
 import type { Incident, Lang, QuorumState, Severity } from './core/types'
 import { SEVERITY_DATA } from './playbookData'
@@ -41,6 +43,52 @@ const SCENARIOS = {
   ],
 }
 
+/**
+ * Approved Responses™ catalog — mirrors api/packages/incidents/src/
+ * approvedResponses.ts APPROVED_RESPONSE_TEMPLATES exactly (ids, labels,
+ * audiences). Kept as a small client-side mirror rather than a fetch so the
+ * audience/type selectors can render with zero network round-trip, same
+ * posture as SCENARIOS above being a local mirror of holding.ts's
+ * HoldingScenario keys. The actual statement bodies are never duplicated
+ * here — only the catalog metadata — so there is nothing legally-sensitive
+ * to keep in sync, just 6 labels and their audience tags.
+ */
+const APPROVED_RESPONSE_TYPES: Array<{ id: string; en: string; bm: string; audiences: string[] }> = [
+  { id: 'holding', en: 'Holding Statement', bm: 'Kenyataan Media', audiences: ['Media', 'Regulator'] },
+  {
+    id: 'product_recall',
+    en: 'Product Recall Statement',
+    bm: 'Kenyataan Penarikan Balik Produk',
+    audiences: ['Customer', 'Media'],
+  },
+  {
+    id: 'material_disclosure',
+    en: 'Bursa / Material Disclosure',
+    bm: 'Pendedahan Material',
+    audiences: ['Regulator', 'Board'],
+  },
+  {
+    id: 'crisis_update',
+    en: 'Crisis Update',
+    bm: 'Kemas Kini Situasi',
+    audiences: ['Media', 'Board', 'Employee'],
+  },
+  {
+    id: 'incident_closure',
+    en: 'Incident Closure',
+    bm: 'Kenyataan Penutupan Insiden',
+    audiences: ['Board', 'Regulator', 'Employee'],
+  },
+  {
+    id: 'social_media',
+    en: 'Short Social Media Version',
+    bm: 'Versi Media Sosial Ringkas',
+    audiences: ['Social Media'],
+  },
+]
+
+const RESPONSE_AUDIENCES = ['Regulator', 'Media', 'Customer', 'Employee', 'Board', 'Social Media']
+
 export default function CoreShell() {
   const [lang, setLang] = useState<Lang>('en')
   const [mode, setMode] = useState<'landing' | 'app'>('landing')
@@ -57,6 +105,12 @@ export default function CoreShell() {
   const [statementMeta, setStatementMeta] = useState<Pick<HoldingStatementResult, 'disclaimer' | 'source'> | null>(
     null
   )
+  const [orgName, setOrgName] = useState('Demo Holdings Bhd')
+  const [productName, setProductName] = useState('')
+  const [audienceFilter, setAudienceFilter] = useState('All')
+  const [responseType, setResponseType] = useState('holding')
+  const [approvedBusy, setApprovedBusy] = useState(false)
+  const [approvedResult, setApprovedResult] = useState<ApprovedResponseResult | null>(null)
   const backend = backendMode()
   const t = useCallback((en: string, bm: string) => (lang === 'bm' ? bm : en), [lang])
 
@@ -130,7 +184,7 @@ export default function CoreShell() {
     try {
       const result = await generateHoldingStatement({
         scenario: active.scenario,
-        company: 'Demo Holdings Bhd',
+        company: orgName,
         issue: active.title,
         lang: active.statementLang,
       })
@@ -144,6 +198,36 @@ export default function CoreShell() {
       })
     } finally {
       setStatementBusy(false)
+    }
+  }
+
+  const onAudienceChange = (value: string) => {
+    setAudienceFilter(value)
+    const matches = APPROVED_RESPONSE_TYPES.filter((r) => value === 'All' || r.audiences.includes(value))
+    if (matches.length && !matches.some((m) => m.id === responseType)) {
+      setResponseType(matches[0].id)
+    }
+  }
+
+  const generateApproved = async () => {
+    if (!active || approvedBusy) return
+    setApprovedBusy(true)
+    try {
+      const result = await generateApprovedResponse({
+        incidentId: active.id,
+        type: responseType,
+        lang: 'both',
+        company: orgName,
+        productName: responseType === 'product_recall' ? productName : undefined,
+      })
+      setApprovedResult(result)
+    } catch (err) {
+      setApprovedResult({
+        type: responseType,
+        disclaimer: err instanceof Error ? err.message : 'Could not reach escalate-my-api.',
+      })
+    } finally {
+      setApprovedBusy(false)
     }
   }
 
@@ -313,6 +397,10 @@ export default function CoreShell() {
               </div>
               <div className="stmt-controls">
                 <div className="form-row">
+                  <label>{t('Organisation name', 'Nama organisasi')}</label>
+                  <input value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+                </div>
+                <div className="form-row">
                   <label>{t('Scenario', 'Senario')}</label>
                   <select value={active.scenario} onChange={(e) => patchActive((inc) => ({ ...inc, scenario: e.target.value }))}>
                     {SCENARIOS[lang].map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -345,6 +433,77 @@ export default function CoreShell() {
                     )}
                 </p>
               </div>
+            </section>
+          )}
+
+          {!loading && active && section === 'statements' && (
+            <section className="card module-card">
+              <div className="module-card__head">
+                <h2><span className="step">✓</span> {t('Approved Responses™', 'Respons Diluluskan™')}</h2>
+              </div>
+              <p className="module-lead">
+                {t(
+                  'Pre-vetted, template-fill statements — never AI-generated. Clear via Decision Quorum (Legal / Corporate Affairs) before release.',
+                  'Kenyataan templat pra-lulus — tidak pernah dijana AI. Lulus melalui Kuorum Keputusan (Legal / Hal Ehwal Korporat) sebelum keluaran.'
+                )}
+              </p>
+              <div className="stmt-controls">
+                <div className="form-row">
+                  <label>{t('Audience', 'Audiens')}</label>
+                  <select value={audienceFilter} onChange={(e) => onAudienceChange(e.target.value)}>
+                    <option value="All">{t('All', 'Semua')}</option>
+                    {RESPONSE_AUDIENCES.map((a) => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label>{t('Response type', 'Jenis respons')}</label>
+                  <select value={responseType} onChange={(e) => setResponseType(e.target.value)}>
+                    {APPROVED_RESPONSE_TYPES.filter((r) => audienceFilter === 'All' || r.audiences.includes(audienceFilter)).map((r) => (
+                      <option key={r.id} value={r.id}>{lang === 'bm' ? r.bm : r.en}</option>
+                    ))}
+                  </select>
+                </div>
+                {responseType === 'product_recall' && (
+                  <div className="form-row">
+                    <label>{t('Product name', 'Nama produk')}</label>
+                    <input
+                      value={productName}
+                      onChange={(e) => setProductName(e.target.value)}
+                      placeholder={t('Optional — leave blank to fill manually', 'Pilihan — biar kosong untuk diisi secara manual')}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="btn-row">
+                <button type="button" className="btn btn-primary" onClick={generateApproved} disabled={approvedBusy}>
+                  {approvedBusy ? t('Generating…', 'Menjana…') : t('Generate approved draft', 'Jana draf diluluskan')}
+                </button>
+              </div>
+              {approvedResult?.en && (
+                <div className="form-row" style={{ marginTop: '1rem' }}>
+                  <label>EN</label>
+                  <textarea
+                    rows={10}
+                    value={approvedResult.en}
+                    onChange={(e) => setApprovedResult((prev) => (prev ? { ...prev, en: e.target.value } : prev))}
+                  />
+                </div>
+              )}
+              {approvedResult?.bm && (
+                <div className="form-row" style={{ marginTop: '1rem' }}>
+                  <label>BM</label>
+                  <textarea
+                    rows={10}
+                    value={approvedResult.bm}
+                    onChange={(e) => setApprovedResult((prev) => (prev ? { ...prev, bm: e.target.value } : prev))}
+                  />
+                </div>
+              )}
+              {approvedResult && (
+                <p className="stmt-hint">
+                  {approvedResult.disclaimer}
+                </p>
+              )}
             </section>
           )}
 

@@ -361,4 +361,47 @@ export async function generateHoldingStatement(opts: {
   return { en: line('en'), bm: line('bm'), disclaimer, source: 'local' }
 }
 
+export interface ApprovedResponseResult {
+  type: string
+  en?: string
+  bm?: string
+  disclaimer: string
+}
+
+/**
+ * Approved Responses™ — real backend call (POST /api/v1/approved-responses,
+ * api/apps/api/src/index.ts -> IncidentService.approvedResponse ->
+ * api/packages/incidents/src/approvedResponses.ts). Unlike
+ * generateHoldingStatement, there is deliberately no local-demo fallback
+ * that fabricates statement text: these are meant to be pre-vetted,
+ * legally-approved boilerplate, and duplicating that wording into the
+ * frontend bundle as a "local mode" stand-in would create a second copy of
+ * legally-sensitive text that could silently drift out of sync with the
+ * real templates. Local/no-backend mode returns the disclaimer only.
+ */
+export async function generateApprovedResponse(opts: {
+  incidentId: string
+  type: string
+  lang: 'en' | 'bm' | 'both'
+  company: string
+  productName?: string
+}): Promise<ApprovedResponseResult> {
+  if (apiBase()) {
+    return (await requestJson('/api/v1/approved-responses', {
+      method: 'POST',
+      body: JSON.stringify({
+        incident_id: opts.incidentId,
+        type: opts.type,
+        lang: opts.lang,
+        company: opts.company,
+        product_name: opts.productName,
+      }),
+    })) as ApprovedResponseResult
+  }
+  return {
+    type: opts.type,
+    disclaimer: 'Local demo mode — no backend configured. Approved Responses require escalate-my-api.',
+  }
+}
+
 export { wsBase, apiBase }
