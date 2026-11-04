@@ -29,7 +29,7 @@
     "API_VERSION": "v1"
   },
   "triggers": {
-    "crons": ["*/15 * * * *"]
+    "crons": ["*/30 * * * *"]
   },
   "observability": {
     "enabled": false,
