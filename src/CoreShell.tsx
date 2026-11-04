@@ -67,7 +67,7 @@ const STATEMENTS: Record<string, { en: string; bm: string }> = {
 }
 
 export default function CoreShell() {
-  const [lang, setLang] = useState<Lang>('bm')
+  const [lang, setLang] = useState<Lang>('en')
   const [mode, setMode] = useState<'landing' | 'app'>('landing')
 
   useEffect(() => {
