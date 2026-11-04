@@ -67,6 +67,8 @@ export interface Task {
   owner: string | null
   status: TaskStatus
   due_band: string | null
+  due_at: string | null
+  escalated_at: string | null
   completed_at: string | null
   created_at: string
 }

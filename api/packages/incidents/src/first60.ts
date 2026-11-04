@@ -25,3 +25,10 @@ export const FIRST_60_STEPS: First60Step[] = [
 export function first60Checklist() {
   return FIRST_60_STEPS
 }
+
+/** "0–10 min" -> 10, "40–60 min" -> 60. The upper bound of a step's band, in minutes from T0. */
+export function bandUpperMinutes(band: string): number {
+  const last = band.split('–').pop() ?? band
+  const n = parseInt(last, 10)
+  return Number.isFinite(n) ? n : 60
+}

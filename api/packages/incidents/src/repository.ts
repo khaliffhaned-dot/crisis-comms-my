@@ -1,4 +1,5 @@
-import { id, nowIso, NotFoundError, type Env, type Incident, type IncidentStatus } from '@escalate-my/shared'
+import { id, nowIso, NotFoundError, type Env, type Incident, type IncidentStatus, type Task } from '@escalate-my/shared'
+import { FIRST_60_STEPS, bandUpperMinutes } from './first60'
 
 export class IncidentRepository {
   constructor(private db: D1Database) {}
@@ -85,6 +86,30 @@ export class IncidentRepository {
       .prepare(`UPDATE incidents SET status = ?, updated_at = ? WHERE id = ?`)
       .bind(status, nowIso(), incidentId)
       .run()
+  }
+
+  /** Seed the 13 First Sixty Minutes™ tasks against a freshly created incident, each with a due_at computed from its band. */
+  async seedFirst60Tasks(incidentId: string, incidentCreatedAt: string): Promise<void> {
+    const t0 = new Date(incidentCreatedAt).getTime()
+    const now = nowIso()
+    for (const step of FIRST_60_STEPS) {
+      const dueAt = new Date(t0 + bandUpperMinutes(step.band) * 60 * 1000).toISOString()
+      await this.db
+        .prepare(
+          `INSERT INTO tasks (id, incident_id, step_index, title, owner, status, due_band, due_at, created_at)
+           VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
+        )
+        .bind(id('TSK'), incidentId, step.step, step.en, step.owner, step.band, dueAt, now)
+        .run()
+    }
+  }
+
+  async listTasks(incidentId: string): Promise<Task[]> {
+    const res = await this.db
+      .prepare(`SELECT * FROM tasks WHERE incident_id = ? ORDER BY step_index ASC`)
+      .bind(incidentId)
+      .all<Task>()
+    return res.results ?? []
   }
 
   async writeAudit(entry: {
