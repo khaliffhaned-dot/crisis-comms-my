@@ -7,6 +7,7 @@ import CommandCentre from './core/CommandCentre'
 import QuorumModule from './core/QuorumModule'
 import AuditModule from './core/AuditModule'
 import DirectoryModule from './core/DirectoryModule'
+import SignalsModule from './core/SignalsModule'
 import { DecisionIntelligence, RegulatoryIntelligence, BoardIntelligence } from './core/IntelligenceModules'
 import { CORE_MODULES, type CoreSection } from './core/moduleConfig'
 import {
@@ -19,6 +20,7 @@ import {
   generateApprovedResponse,
   getOrganisationSettings,
   saveOrganisationSettings,
+  getIncident,
   type HoldingStatementResult,
   type ApprovedResponseResult,
 } from './core/api'
@@ -192,6 +194,15 @@ export default function CoreShell() {
       lang === 'bm' ? `Insiden ${new Date().toLocaleString('en-MY')}` : `Incident ${new Date().toLocaleString('en-MY')}`
     const inc = await createIncident(title)
     setIncidents((prev) => [inc, ...prev])
+    setActiveId(inc.id)
+    setSection('incident')
+  }
+
+  /** The incident was already created server-side (SignalsModule.onAction -> POST /api/v1/signals/:id/action); this just folds it into the already-loaded list and switches to it. */
+  const onSignalIncidentCreated = async (incidentId: string) => {
+    const inc = await getIncident(incidentId)
+    if (!inc) return
+    setIncidents((prev) => [inc, ...prev.filter((i) => i.id !== inc.id)])
     setActiveId(inc.id)
     setSection('incident')
   }
@@ -584,9 +595,10 @@ export default function CoreShell() {
           )}
 
           {!loading && active && section === 'audit' && <AuditModule lang={lang} incident={active} />}
+          {!loading && section === 'signals' && <SignalsModule lang={lang} onIncidentCreated={onSignalIncidentCreated} />}
           {!loading && section === 'directory' && <DirectoryModule lang={lang} />}
 
-          {!loading && !active && !['command', 'manual', 'directory', 'regulatory-intel', 'decision-intel'].includes(section) && (
+          {!loading && !active && !['command', 'manual', 'directory', 'signals', 'regulatory-intel', 'decision-intel'].includes(section) && (
             <p className="core-muted">{t('Create or open an incident first.', 'Cipta atau buka insiden dahulu.')}</p>
           )}
         </div>

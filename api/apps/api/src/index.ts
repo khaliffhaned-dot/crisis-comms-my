@@ -11,6 +11,11 @@ import {
   memberRepo,
   getOrganisationSettings,
   putOrganisationSettings,
+  signalRepo,
+  getSignalKeyStatus,
+  rotateSignalKey,
+  verifySignalKey,
+  type SignalInput,
 } from '@escalate-my/incidents'
 import {
   listRegulatoryClocks,
@@ -155,6 +160,128 @@ app.put('/api/v1/organisations/:id/settings', async (c) => {
   const body = await c.req.json<{ name?: string; default_statement_lang?: 'en' | 'bm' }>()
   const settings = await putOrganisationSettings(c.env, orgId, body)
   return c.json({ item: settings })
+})
+
+/**
+ * Signal intake — the "orchestration, not monitoring" boundary. External
+ * systems an organisation already runs (Meltwater, Sentinel, ServiceNow,
+ * Zendesk, Salesforce, a generic webhook — anything that can POST JSON)
+ * push a normalized event here. Escalate never duplicates what those
+ * systems already do; it classifies the signal with the same rules-only
+ * severity heuristic used everywhere else in this product, and holds it
+ * as 'pending' until a human explicitly creates or dismisses the
+ * incident — see packages/incidents/src/signals.ts for why this is
+ * deliberately not auto-promoted.
+ *
+ * Authenticated by a per-organisation shared secret (CONFIG KV via
+ * signalAuth.ts), not Cloudflare Access — an external SaaS webhook can't
+ * do an interactive OAuth flow. No key configured for an organisation
+ * means every signal to it is rejected; there is no open-by-default path.
+ */
+app.post('/api/v1/signals', async (c) => {
+  const body = await c.req.json<{
+    organisation_id?: string
+    incident_type?: string
+    source?: string
+    description?: string
+    severity_hint?: string
+    timestamp?: string
+  }>()
+  if (!body.organisation_id || !body.incident_type || !body.source || !body.description) {
+    return c.json({ error: 'organisation_id, incident_type, source and description are required' }, 400)
+  }
+
+  const authHeader = c.req.header('Authorization') || ''
+  const providedKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const authorized = await verifySignalKey(c.env, body.organisation_id, providedKey)
+  if (!authorized) {
+    return c.json({ error: 'Invalid or missing signal key for this organisation' }, 401)
+  }
+
+  const input: SignalInput = {
+    incident_type: body.incident_type.slice(0, 100),
+    source: body.source.slice(0, 100),
+    description: body.description.slice(0, 5000),
+    severity_hint: body.severity_hint?.slice(0, 50),
+    timestamp: body.timestamp,
+  }
+  const signal = await signalRepo(c.env).create(body.organisation_id, input)
+  await incidentRepo(c.env).writeAudit({
+    organisation_id: body.organisation_id,
+    actor: input.source,
+    action: 'signal.received',
+    detail: `${input.incident_type} — ${input.description.slice(0, 200)}`,
+  })
+  return c.json({ item: signal }, 201)
+})
+
+app.get('/api/v1/organisations/:id/signals', async (c) => {
+  const status = c.req.query('status')
+  const items = await signalRepo(c.env).list(c.req.param('id'), status)
+  return c.json({ items })
+})
+
+/** Turns a pending signal into a real incident — the one place a human confirms what every signal source only proposed. */
+app.post('/api/v1/signals/:id/action', async (c) => {
+  const signalId = c.req.param('id')
+  const body = await c.req.json<{ actor?: string }>().catch(() => ({}) as { actor?: string })
+  const identity = await resolveIdentity(c.executionCtx)
+  const actor = identity.actor || body.actor || 'Operator'
+
+  const signal = await signalRepo(c.env).get(signalId)
+  const svc = new IncidentService(c.env)
+  let incident = await svc.create({
+    organisation_id: signal.organisation_id,
+    title: `${signal.source}: ${signal.description}`.slice(0, 140),
+    actor,
+  })
+  if (signal.recommended_severity) {
+    await incidentRepo(c.env).updateSeverity(incident.id, signal.recommended_severity)
+    incident = { ...incident, severity: signal.recommended_severity }
+  }
+  const updatedSignal = await signalRepo(c.env).markActioned(signalId, incident.id, actor)
+  await incidentRepo(c.env).writeAudit({
+    organisation_id: signal.organisation_id,
+    incident_id: incident.id,
+    actor,
+    action: 'signal.actioned',
+    detail: `${signal.source} — ${signal.incident_type}`,
+  })
+  return c.json({ item: updatedSignal, incident }, 201)
+})
+
+app.post('/api/v1/signals/:id/dismiss', async (c) => {
+  const signalId = c.req.param('id')
+  const body = await c.req.json<{ actor?: string }>().catch(() => ({}) as { actor?: string })
+  const identity = await resolveIdentity(c.executionCtx)
+  const actor = identity.actor || body.actor || 'Operator'
+
+  const signal = await signalRepo(c.env).get(signalId)
+  const updatedSignal = await signalRepo(c.env).dismiss(signalId, actor)
+  await incidentRepo(c.env).writeAudit({
+    organisation_id: signal.organisation_id,
+    actor,
+    action: 'signal.dismissed',
+    detail: `${signal.source} — ${signal.incident_type}`,
+  })
+  return c.json({ item: updatedSignal })
+})
+
+/** Status only — never returns the key itself, so the UI can show "configured" without re-exposing a live secret. */
+app.get('/api/v1/organisations/:id/signal-key/status', async (c) => {
+  const status = await getSignalKeyStatus(c.env, c.req.param('id'))
+  return c.json(status)
+})
+
+/** Generates (or replaces) the organisation's signal key. Returned in full exactly once — the caller must copy it immediately. */
+app.post('/api/v1/organisations/:id/signal-key/rotate', async (c) => {
+  const orgId = c.req.param('id')
+  const roleCheck = await checkRole(c.env, c.executionCtx, orgId, [])
+  if (!roleCheck.allowed) {
+    return c.json({ error: 'Only an Admin can rotate the signal key', your_role: roleCheck.role }, 403)
+  }
+  const result = await rotateSignalKey(c.env, orgId)
+  return c.json(result)
 })
 
 /** Regulatory Intelligence™ — match facts to obligation catalog */

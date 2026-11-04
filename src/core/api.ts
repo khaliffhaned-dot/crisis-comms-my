@@ -435,4 +435,64 @@ export async function generateApprovedResponse(opts: {
   }
 }
 
+export interface SignalItem {
+  id: string
+  organisation_id: string
+  source: string
+  incident_type: string
+  description: string
+  severity_hint: string | null
+  recommended_severity: Severity | null
+  occurred_at: string
+  status: 'pending' | 'actioned' | 'dismissed'
+  incident_id: string | null
+  created_at: string
+}
+
+/**
+ * Signal intake — pending events pushed in from a system the org already
+ * runs (Meltwater, Sentinel, ServiceNow, …) via POST /api/v1/signals, not
+ * from this frontend. This only reads and actions what already arrived;
+ * it never submits a signal itself. See api/packages/incidents/src/signals.ts.
+ */
+export async function listPendingSignals(): Promise<SignalItem[]> {
+  if (!apiBase()) return []
+  const payload = (await requestJson(
+    `/api/v1/organisations/${encodeURIComponent(orgId())}/signals?status=pending`
+  )) as { items?: SignalItem[] }
+  return payload.items ?? []
+}
+
+export async function actionSignal(signalId: string, actor = 'Operator'): Promise<{ item: SignalItem; incident: { id: string } }> {
+  return (await requestJson(`/api/v1/signals/${encodeURIComponent(signalId)}/action`, {
+    method: 'POST',
+    body: JSON.stringify({ actor }),
+  })) as { item: SignalItem; incident: { id: string } }
+}
+
+export async function dismissSignal(signalId: string, actor = 'Operator'): Promise<SignalItem> {
+  const payload = (await requestJson(`/api/v1/signals/${encodeURIComponent(signalId)}/dismiss`, {
+    method: 'POST',
+    body: JSON.stringify({ actor }),
+  })) as { item: SignalItem }
+  return payload.item
+}
+
+export interface SignalKeyStatus {
+  configured: boolean
+  generated_at: string | null
+}
+
+export async function getSignalKeyStatus(): Promise<SignalKeyStatus> {
+  if (!apiBase()) return { configured: false, generated_at: null }
+  return (await requestJson(`/api/v1/organisations/${encodeURIComponent(orgId())}/signal-key/status`)) as SignalKeyStatus
+}
+
+/** Returns the new key in full, exactly once — the caller must copy it immediately; it cannot be retrieved again, only rotated. */
+export async function rotateSignalKey(): Promise<{ key: string; generated_at: string }> {
+  return (await requestJson(`/api/v1/organisations/${encodeURIComponent(orgId())}/signal-key/rotate`, {
+    method: 'POST',
+  })) as { key: string; generated_at: string }
+}
+
 export { wsBase, apiBase }

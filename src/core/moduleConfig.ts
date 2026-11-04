@@ -7,6 +7,7 @@ export type CoreSection =
   | 'quorum'
   | 'clocks'
   | 'statements'
+  | 'signals'
   | 'audit'
   | 'directory'
   | 'manual'
@@ -29,6 +30,7 @@ export const CORE_MODULES: CoreNavItem[] = [
   { id: 'quorum', en: 'Decision Quorum', bm: 'Kuorum Keputusan', icon: '◎', group: 'core' },
   { id: 'clocks', en: 'Regulatory Clock', bm: 'Jam Pengawalseliaan', icon: '⏱', group: 'core' },
   { id: 'statements', en: 'Statements', bm: 'Kenyataan', icon: '✎', group: 'core' },
+  { id: 'signals', en: 'Signals', bm: 'Isyarat', icon: '◉', group: 'core' },
   { id: 'audit', en: 'Audit Trail', bm: 'Jejak Audit', icon: '☰', group: 'core' },
   { id: 'directory', en: 'Directory', bm: 'Direktori', icon: '☎', group: 'core' },
   { id: 'decision-intel', en: 'Decision Intelligence', bm: 'Kepintaran Keputusan', icon: '◆', group: 'intel' },
