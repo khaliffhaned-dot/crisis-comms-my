@@ -221,6 +221,44 @@ app.get('/api/v1/organisations/:id/signals', async (c) => {
   return c.json({ items })
 })
 
+/**
+ * Demo-only signal intake — same SignalRepository.create() pipeline as the
+ * real POST /api/v1/signals (same rules-based assessment, same
+ * pending-until-human-decides posture, same real D1 row), but without the
+ * per-organisation signal key. That key exists to authenticate an
+ * *external* vendor's webhook; the guided in-app demo walkthrough is this
+ * same product triggering its own real pipeline to show a prospect how it
+ * behaves, not an external system, so requiring a vendor credential here
+ * would just be friction with no real security purpose. Input is capped
+ * the same way as the real endpoint.
+ */
+app.post('/api/v1/demo/signals', async (c) => {
+  const body = await c.req.json<{
+    organisation_id?: string
+    incident_type?: string
+    source?: string
+    description?: string
+    severity_hint?: string
+  }>()
+  if (!body.organisation_id || !body.incident_type || !body.source || !body.description) {
+    return c.json({ error: 'organisation_id, incident_type, source and description are required' }, 400)
+  }
+  const input: SignalInput = {
+    incident_type: body.incident_type.slice(0, 100),
+    source: body.source.slice(0, 100),
+    description: body.description.slice(0, 5000),
+    severity_hint: body.severity_hint?.slice(0, 50),
+  }
+  const signal = await signalRepo(c.env).create(body.organisation_id, input)
+  await incidentRepo(c.env).writeAudit({
+    organisation_id: body.organisation_id,
+    actor: `${input.source} (demo)`,
+    action: 'signal.received',
+    detail: `${input.incident_type} — ${input.description.slice(0, 200)}`,
+  })
+  return c.json({ item: signal }, 201)
+})
+
 /** Turns a pending signal into a real incident — the one place a human confirms what every signal source only proposed. */
 app.post('/api/v1/signals/:id/action', async (c) => {
   const signalId = c.req.param('id')

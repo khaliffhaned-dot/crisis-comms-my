@@ -435,6 +435,13 @@ export async function generateApprovedResponse(opts: {
   }
 }
 
+export type ThreeRLevel = 'Low' | 'Medium' | 'High'
+export interface ThreeRAssessment {
+  royal: ThreeRLevel
+  race: ThreeRLevel
+  religion: ThreeRLevel
+}
+
 export interface SignalItem {
   id: string
   organisation_id: string
@@ -443,6 +450,10 @@ export interface SignalItem {
   description: string
   severity_hint: string | null
   recommended_severity: Severity | null
+  potential_stakeholders: string[]
+  potential_authorities: string[]
+  confidence: number | null
+  three_r: ThreeRAssessment | null
   occurred_at: string
   status: 'pending' | 'actioned' | 'dismissed'
   incident_id: string | null
@@ -474,6 +485,26 @@ export async function dismissSignal(signalId: string, actor = 'Operator'): Promi
   const payload = (await requestJson(`/api/v1/signals/${encodeURIComponent(signalId)}/dismiss`, {
     method: 'POST',
     body: JSON.stringify({ actor }),
+  })) as { item: SignalItem }
+  return payload.item
+}
+
+/**
+ * Guided-demo-only entry point (POST /api/v1/demo/signals) — same real
+ * SignalRepository pipeline as a real vendor webhook (same assessment,
+ * same pending-until-human-decides row in D1), just without the vendor
+ * API key, since this is the app itself triggering its own real pipeline
+ * to walk a prospect through it, not an external system authenticating in.
+ */
+export async function submitDemoSignal(input: {
+  source: string
+  incident_type: string
+  description: string
+  severity_hint?: string
+}): Promise<SignalItem> {
+  const payload = (await requestJson('/api/v1/demo/signals', {
+    method: 'POST',
+    body: JSON.stringify({ organisation_id: orgId(), ...input }),
   })) as { item: SignalItem }
   return payload.item
 }

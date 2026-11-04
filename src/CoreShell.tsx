@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Landing from './Landing'
+import DemoWalkthrough from './DemoWalkthrough'
 import Manual from './Manual'
 import First60Module from './First60Module'
 import ClocksModule from './ClocksModule'
@@ -102,7 +103,7 @@ function NavIcon({ icon }: { icon: CoreNavItem['icon'] }) {
 
 export default function CoreShell() {
   const [lang, setLang] = useState<Lang>('en')
-  const [mode, setMode] = useState<'landing' | 'app'>('landing')
+  const [mode, setMode] = useState<'landing' | 'app' | 'demo'>('landing')
 
   useEffect(() => {
     document.documentElement.lang = lang === 'bm' ? 'ms' : 'en'
@@ -309,7 +310,22 @@ export default function CoreShell() {
           setSection('manual')
           setMode('app')
         }}
+        onStartDemo={() => setMode('demo')}
         onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
+      />
+    )
+  }
+
+  if (mode === 'demo') {
+    return (
+      <DemoWalkthrough
+        lang={lang}
+        onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
+        onExit={() => setMode('landing')}
+        onEnterApp={async (incidentId) => {
+          await onSignalIncidentCreated(incidentId)
+          setMode('app')
+        }}
       />
     )
   }
