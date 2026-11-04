@@ -29,6 +29,7 @@ export class IncidentService {
     scenario?: string
     owner?: string
     actor?: string
+    app_version?: string
   }) {
     const inc = await this.repo().create({
       organisation_id: input.organisation_id,
@@ -43,7 +44,7 @@ export class IncidentService {
       incident_id: inc.id,
       actor: input.actor || 'system',
       action: 'incident.created',
-      detail: input.title,
+      detail: input.app_version ? `${input.title} · build ${input.app_version}` : input.title,
     })
     return inc
   }
