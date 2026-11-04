@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ActionBanner } from '@/components/ActionBanner'
 import { ChecklistProgress, type ChecklistItem } from '@/components/ChecklistProgress'
 import { IncidentTimeline } from '@/components/IncidentTimeline'
+import { PresenceIndicator } from '@/components/PresenceIndicator'
 import { QuorumCard } from '@/components/QuorumCard'
 import { RegulatoryClock } from '@/components/RegulatoryClock'
 import { SeverityBadge } from '@/components/SeverityBadge'
@@ -22,7 +23,7 @@ import { useIncident } from '@/lib/useIncident'
  */
 export function IncidentDetails({ onActiveIncident }: { onActiveIncident: (id: string | null) => void }) {
   const { id } = useParams<{ id: string }>()
-  const { loading, error, payload, refresh } = useIncident(id)
+  const { loading, error, payload, refresh, presence } = useIncident(id)
 
   useEffect(() => {
     onActiveIncident(payload?.incident.id ?? id ?? null)
@@ -51,10 +52,13 @@ export function IncidentDetails({ onActiveIncident }: { onActiveIncident: (id: s
 
   return (
     <div className="flex flex-col gap-5">
-      <Link to="/" className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1.5 text-sm">
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        {incident.title}
-      </Link>
+      <div className="flex items-start justify-between gap-3">
+        <Link to="/" className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1.5 text-sm">
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          {incident.title}
+        </Link>
+        <PresenceIndicator presence={presence} />
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <SeverityBadge severity={incident.severity} />

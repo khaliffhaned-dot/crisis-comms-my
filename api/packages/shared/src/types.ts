@@ -110,6 +110,7 @@ export interface Env {
   DB: D1Database
   CONFIG: KVNamespace
   REPORTS: R2Bucket
+  INCIDENT_ROOM: DurableObjectNamespace
   APP_NAME: string
   API_VERSION: string
 }

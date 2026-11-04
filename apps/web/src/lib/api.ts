@@ -43,6 +43,14 @@ export async function getIncidentFull(id: string): Promise<FullIncidentPayload> 
   return requestJson<FullIncidentPayload>(`/api/v1/incidents/${encodeURIComponent(id)}/full`)
 }
 
+/** WebSocket URL for live presence + update pushes on one incident (see
+ * WAR-ROOM.md) — same host/scheme as apiBase(), just ws(s):// instead of
+ * http(s)://. */
+export function liveIncidentUrl(incidentId: string, name: string): string {
+  const wsBase = apiBase().replace(/^http/, 'ws')
+  return `${wsBase}/api/v1/incidents/${encodeURIComponent(incidentId)}/live?name=${encodeURIComponent(name)}`
+}
+
 export async function updateTaskStatus(incidentId: string, taskId: string, status: ApiTask['status'], actor = 'Operator'): Promise<ApiTask> {
   const result = await requestJson<{ item: ApiTask }>(
     `/api/v1/incidents/${encodeURIComponent(incidentId)}/tasks/${encodeURIComponent(taskId)}`,
