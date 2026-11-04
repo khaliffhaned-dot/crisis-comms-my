@@ -1,0 +1,46 @@
+/* Cloudflare Pages build metadata: compact global system-status panel. */
+.build-info {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 100;
+  max-width: min(28rem, calc(100vw - 2rem));
+  font-size: 0.78rem;
+}
+.build-info__toggle {
+  display: block;
+  margin-left: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  font-weight: 700;
+}
+.build-info__toggle:hover,
+.build-info__toggle:focus-visible { border-color: var(--primary); }
+.build-info__panel {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+.build-info__panel h2 { margin: 0 0 0.75rem; font-size: 0.95rem; }
+.build-info__panel dl { display: grid; gap: 0.55rem; margin: 0; }
+.build-info__panel dl > div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 0.5rem; }
+.build-info__panel dt { color: var(--text-secondary); font-weight: 600; }
+.build-info__panel dd { margin: 0; overflow-wrap: anywhere; }
+.build-info__panel a { color: var(--primary); }
+.build-info__warning {
+  margin: 0 0 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #f0b429;
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
+  color: #713f12;
+  font-weight: 700;
+}
