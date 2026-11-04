@@ -95,7 +95,13 @@ export default function CommandCentre({
         </div>
         <div className="core-kpi__card">
           <span className="lbl">{t('Active severity', 'Keterukan aktif')}</span>
-          <span className="val">{active?.severity ? `L${active.severity}` : '—'}</span>
+          <span className="val">
+            {active?.severity ? (
+              <span className={`sev-chip sev-chip-${active.severity}`}>L{active.severity}</span>
+            ) : (
+              '—'
+            )}
+          </span>
         </div>
         <div className="core-kpi__card">
           <span className="lbl">{t('Readiness', 'Kesediaan')}</span>
@@ -140,7 +146,7 @@ export default function CommandCentre({
         {result && (
           <div className="intel-result">
             <div className="intel-result__meta">
-              <span className="intel-sev">L{result.severity}</span>
+              <span className={`sev-chip sev-chip-${result.severity}`}>L{result.severity}</span>
               <span>{t('Confidence', 'Keyakinan')} {result.confidence}%</span>
               <span>{t('Regulatory risk', 'Risiko kawal selia')}: {result.regulatory_risk}</span>
               <span className="mono">{result.source}</span>
@@ -181,8 +187,20 @@ export default function CommandCentre({
                 <tr key={inc.id} className={inc.id === activeId ? 'is-active' : ''}>
                   <td className="mono">{inc.id}</td>
                   <td>{inc.title}</td>
-                  <td>{inc.severity ? `L${inc.severity}` : '—'}</td>
-                  <td>{inc.status}</td>
+                  <td>
+                    {inc.severity ? (
+                      <span className={`sev-chip sev-chip-${inc.severity}`}>L{inc.severity}</span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td>
+                    {inc.status === 'closed' ? (
+                      <span className="sev-chip sev-chip-closed">{t('Closed', 'Ditutup')}</span>
+                    ) : (
+                      inc.status
+                    )}
+                  </td>
                   <td>{inc.owner}</td>
                   <td>
                     <button type="button" className="btn btn-secondary" onClick={() => onOpen(inc.id)}>

@@ -69,7 +69,7 @@ export function DecisionIntelligence({ lang, incident, onApplySeverity }: Props)
       {result && (
         <div className="intel-result">
           <div className="intel-result__meta">
-            <span className="intel-sev">L{result.severity}</span>
+            <span className={`sev-chip sev-chip-${result.severity}`}>L{result.severity}</span>
             <span>{t('Confidence', 'Keyakinan')} {result.confidence}%</span>
             <span>{t('Regulatory risk', 'Risiko kawal selia')}: {result.regulatory_risk}</span>
             <span className="mono">{result.source}</span>

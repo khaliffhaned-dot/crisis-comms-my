@@ -92,13 +92,6 @@
   font-size: 0.82rem;
   font-weight: 600;
 }
-.intel-sev {
-  background: #dc2626;
-  color: white;
-  padding: 0.18rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-}
 .intel-actions {
   margin: 0.45rem 0 0.65rem 1.05rem;
   padding: 0;

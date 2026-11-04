@@ -30,6 +30,26 @@
   --text-muted: #6c757d;
   --card: #ffffff;
   --bg: #f8f9fa;
+
+  /* Severity palette — L1-L4 + closed. Recorded in .ux-profile.md. The one
+     place in this UI color is used to carry operational meaning rather
+     than decoration: a user should be able to tell L1 from L4 from
+     across the room. Never used for anything else. */
+  --severity-l1: #2563eb;
+  --severity-l1-bg: #eff6ff;
+  --severity-l1-border: #bfdbfe;
+  --severity-l2: #0891b2;
+  --severity-l2-bg: #ecfeff;
+  --severity-l2-border: #a5f3fc;
+  --severity-l3: #d97706;
+  --severity-l3-bg: #fffbeb;
+  --severity-l3-border: #fcd34d;
+  --severity-l4: #dc2626;
+  --severity-l4-bg: #fef2f2;
+  --severity-l4-border: #fca5a5;
+  --severity-closed: #16a34a;
+  --severity-closed-bg: #f0fdf4;
+  --severity-closed-border: #86efac;
 }
 
 *, *::before, *::after {
@@ -124,10 +144,30 @@ textarea, input, select { font-family: inherit; font-size: 0.95rem; }
 .severity-btn.selected { border-color: var(--primary); background: rgba(200, 30, 30, 0.04); }
 .severity-btn .level { font-weight: 700; font-size: 0.95rem; display: block; }
 .severity-btn .bm { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem; }
-.severity-btn.level-1.selected { border-color: #198754; background: #f0fdf4; }
-.severity-btn.level-2.selected { border-color: #ffc107; background: #fffbeb; }
-.severity-btn.level-3.selected { border-color: #fd7e14; background: #fff7ed; }
-.severity-btn.level-4.selected { border-color: #dc3545; background: #fef2f2; }
+.severity-btn.level-1.selected { border-color: var(--severity-l1); background: var(--severity-l1-bg); }
+.severity-btn.level-2.selected { border-color: var(--severity-l2); background: var(--severity-l2-bg); }
+.severity-btn.level-3.selected { border-color: var(--severity-l3); background: var(--severity-l3-bg); }
+.severity-btn.level-4.selected { border-color: var(--severity-l4); background: var(--severity-l4-bg); }
+
+/* Severity chip — compact "L1".."L4" badge for anywhere severity needs to
+   read at a glance (incident tables, signal cards, dashboards). */
+.sev-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+}
+.sev-chip.sev-chip-1 { color: var(--severity-l1); background: var(--severity-l1-bg); border-color: var(--severity-l1-border); }
+.sev-chip.sev-chip-2 { color: var(--severity-l2); background: var(--severity-l2-bg); border-color: var(--severity-l2-border); }
+.sev-chip.sev-chip-3 { color: var(--severity-l3); background: var(--severity-l3-bg); border-color: var(--severity-l3-border); }
+.sev-chip.sev-chip-4 { color: var(--severity-l4); background: var(--severity-l4-bg); border-color: var(--severity-l4-border); }
+.sev-chip.sev-chip-closed { color: var(--severity-closed); background: var(--severity-closed-bg); border-color: var(--severity-closed-border); }
 .severity-action {
   margin-top: 0.85rem; padding: 0.75rem 1rem; background: var(--surface-light);
   border-radius: var(--radius-md); font-size: 0.9rem; border: 1px solid var(--border-color);
