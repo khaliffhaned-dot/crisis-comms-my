@@ -110,7 +110,7 @@ const AI_DISCLAIMER =
  * API. Never throws itself.
  */
 export async function draftHoldingStatement(
-  env: { AI?: Ai },
+  env: { AI?: Ai; AI_GATEWAY_ID?: string },
   opts: DraftHoldingStatementInput
 ): Promise<DraftHoldingStatementResult> {
   if (!env.AI) return { ...createHoldingStatement(opts), source: 'template' }
@@ -139,6 +139,12 @@ export async function draftHoldingStatement(
             .join('\n'),
         },
       ],
+    }, {
+      // Routes this call through AI Gateway for request logging, latency/
+      // error/cost analytics, and optional caching — purely additive, no
+      // behavior change. "default" auto-creates the gateway on first use,
+      // so this needs no account-side setup to start working.
+      gateway: { id: env.AI_GATEWAY_ID || 'default' },
     })
 
     const text = typeof result === 'string' ? result : (result as { response?: string } | null)?.response

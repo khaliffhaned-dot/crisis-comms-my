@@ -323,6 +323,37 @@ export function backendMode(): 'api' | 'war-room' | 'local' {
   return 'local'
 }
 
+export interface OrganisationSettings {
+  name: string
+  default_statement_lang: 'en' | 'bm'
+}
+
+/**
+ * Backed by the CONFIG KV namespace (api/packages/incidents/src/orgSettings.ts).
+ * Replaces the frontend's previous hardcoded "Demo Holdings Bhd" placeholder
+ * with a real per-organisation setting, fetched once and reused across the
+ * Holding Statement and Approved Responses builders. In local-only demo mode
+ * there's no backend to fetch from, so this returns the same placeholder the
+ * UI already defaulted to.
+ */
+export async function getOrganisationSettings(): Promise<OrganisationSettings> {
+  if (apiBase()) {
+    const payload = (await requestJson(`/api/v1/organisations/${encodeURIComponent(orgId())}/settings`)) as {
+      item: OrganisationSettings
+    }
+    return payload.item
+  }
+  return { name: 'Demo Holdings Bhd', default_statement_lang: 'bm' }
+}
+
+export async function saveOrganisationSettings(patch: Partial<OrganisationSettings>): Promise<OrganisationSettings> {
+  const payload = (await requestJson(`/api/v1/organisations/${encodeURIComponent(orgId())}/settings`, {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  })) as { item: OrganisationSettings }
+  return payload.item
+}
+
 export interface HoldingStatementResult {
   en?: string
   bm?: string

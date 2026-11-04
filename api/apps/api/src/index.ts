@@ -9,6 +9,8 @@ import {
   findOverdueTasks,
   escalateTask,
   memberRepo,
+  getOrganisationSettings,
+  putOrganisationSettings,
 } from '@escalate-my/incidents'
 import {
   listRegulatoryClocks,
@@ -127,6 +129,32 @@ app.delete('/api/v1/organisations/:id/members/:email', async (c) => {
 app.get('/api/v1/organisations/:id/audit/verify', async (c) => {
   const result = await incidentRepo(c.env).verifyAuditChain(c.req.param('id'))
   return c.json(result)
+})
+
+/**
+ * Organisation settings — backed by the CONFIG KV namespace (see
+ * packages/incidents/src/orgSettings.ts), bound in wrangler.jsonc since
+ * early on but never actually read or written until now. Read-heavy,
+ * rarely-written per-organisation display settings (name, default
+ * statement language) — fetched by the frontend instead of defaulting to
+ * a hardcoded placeholder organisation name every session. Same write
+ * gate as member management: open until Access + roles are actually
+ * configured for the organisation, Admin-only once they are.
+ */
+app.get('/api/v1/organisations/:id/settings', async (c) => {
+  const settings = await getOrganisationSettings(c.env, c.req.param('id'))
+  return c.json({ item: settings })
+})
+
+app.put('/api/v1/organisations/:id/settings', async (c) => {
+  const orgId = c.req.param('id')
+  const roleCheck = await checkRole(c.env, c.executionCtx, orgId, [])
+  if (!roleCheck.allowed) {
+    return c.json({ error: 'Only an Admin can change organisation settings', your_role: roleCheck.role }, 403)
+  }
+  const body = await c.req.json<{ name?: string; default_statement_lang?: 'en' | 'bm' }>()
+  const settings = await putOrganisationSettings(c.env, orgId, body)
+  return c.json({ item: settings })
 })
 
 /** Regulatory Intelligence™ — match facts to obligation catalog */

@@ -39,7 +39,11 @@
   ],
   "vars": {
     "APP_NAME": "Escalate MY",
-    "API_VERSION": "v1"
+    "API_VERSION": "v1",
+    // Routes the holding-statement Workers AI call (holding.ts) through AI
+    // Gateway for logging/analytics/caching. "default" auto-creates on
+    // first authenticated request — no account-side setup required.
+    "AI_GATEWAY_ID": "default"
   },
   // Simulates a Cloudflare Access-verified identity for `wrangler dev` only —
   // this block is never read in production. There, `ctx.access` is populated
