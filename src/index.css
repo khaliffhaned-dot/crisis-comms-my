@@ -416,6 +416,12 @@ textarea, input, select { font-family: inherit; font-size: 0.95rem; }
   background-color: var(--surface); border-bottom: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm); z-index: 40; gap: 1rem; flex-wrap: wrap;
 }
+.sidebar__menu-btn {
+  display: none;
+  width: 44px; height: 44px; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-color);
+  background: var(--surface); color: var(--text-secondary); cursor: pointer; flex-shrink: 0;
+}
 .shell-header h2 {
   font-size: 1.15rem; font-weight: 700; margin: 0; letter-spacing: -0.02em; color: var(--navy);
 }
@@ -461,11 +467,19 @@ textarea, input, select { font-family: inherit; font-size: 0.95rem; }
 
 @media (max-width: 900px) {
   .app-shell { flex-direction: column; }
+  .sidebar__menu-btn { display: inline-flex; }
+  /* Collapsed by default — a 12-item nav list with no toggle was the bug
+     being fixed here (it rendered as a full-height always-open list above
+     the page content on mobile, one item per row regardless of the old
+     flex-wrap rule, since .nav-item is width:100% unconditionally). Now
+     hidden until .sidebar__menu-btn opens it as an inline drawer that
+     pushes content down, closing itself once a section is picked
+     (CoreShell.tsx's selectSection). */
   .sidebar {
+    display: none;
     width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); padding: 1rem;
   }
-  .sidebar__nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-  .nav-pillar { margin-bottom: 0; }
+  .sidebar.sidebar--open { display: flex; }
   .sub-nav-list { display: none; }
 }
 @media (max-width: 800px) {
