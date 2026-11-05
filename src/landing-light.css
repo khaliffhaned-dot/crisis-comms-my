@@ -28,10 +28,16 @@
   min-height: 100vh;
 }
 
-.landing--ent a {
+/* :not(.ent-btn) so a real <a>-tag button (a page navigation styled as a
+   button, e.g. WhyEscalate.tsx's CTAs — Landing.tsx's own buttons are all
+   <button> so never hit this) keeps .ent-btn--primary/--outline's own
+   text color instead of this rule's higher specificity (0,1,1 vs the
+   button class's 0,1,0) silently winning and making white-on-red text
+   invisible. */
+.landing--ent a:not(.ent-btn) {
   color: var(--ent-accent);
 }
-.landing--ent a:hover {
+.landing--ent a:not(.ent-btn):hover {
   color: var(--ent-accent-hover);
 }
 .landing--ent button,

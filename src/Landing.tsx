@@ -133,6 +133,9 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
             <a className="ent-nav__link" href="#features" onClick={closeNav}>
               {t('Features', 'Ciri-ciri')}
             </a>
+            <a className="ent-nav__link" href="/why-escalate" onClick={closeNav}>
+              {t('Why Escalate', 'Mengapa Escalate')}
+            </a>
             <button
               type="button"
               className="ent-nav__link"
@@ -185,8 +188,8 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
               </h1>
               <p className="ent-lead">
                 {t(
-                  'A Bursa disclosure missed by minutes can cost millions in market value. Escalate MY helps you detect emerging incidents, mobilise decision-makers, and keep an auditable record of every response.',
-                  'Pendedahan Bursa yang terlepas dalam beberapa minit boleh menjejaskan nilai pasaran sehingga berjuta. Escalate MY membantu anda mengesan insiden yang berkembang, memobilisasi pembuat keputusan, dan mengekalkan rekod boleh audit bagi setiap respons.'
+                  'Escalate MY™ is a Crisis Governance Platform that helps organisations detect emerging incidents, coordinate executive decisions and maintain an auditable record of crisis response.',
+                  'Escalate MY™ ialah Platform Tadbir Urus Krisis yang membantu organisasi mengesan insiden yang berkembang, menyelaraskan keputusan eksekutif, dan mengekalkan rekod boleh audit bagi respons krisis.'
                 )}
               </p>
               <div className="ent-hero__cta">

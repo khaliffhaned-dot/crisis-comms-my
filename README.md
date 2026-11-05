@@ -1,10 +1,10 @@
 # Escalate MY™
 
-### Crisis Intelligence Platform for Malaysian Organisations
+### Crisis Governance Platform for Malaysian Organisations
 
 **From uncertainty to action in the moments that matter most.**
 
-[![Platform](https://img.shields.io/badge/Platform-Crisis%20Intelligence-darkred)](#)
+[![Platform](https://img.shields.io/badge/Platform-Crisis%20Governance-darkred)](#)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers%20%7C%20D1%20%7C%20R2-f38020)](#)
 [![Architecture](https://img.shields.io/badge/Architecture-MCP%20Native-2563eb)](#)
 [![Region](https://img.shields.io/badge/Region-Malaysia-dc2626)](#)
@@ -23,7 +23,7 @@
 
 ## The First Hour Decides Everything.
 
-Escalate MY helps organisations assess incidents, coordinate decision-makers, manage regulatory obligations and execute response actions through a unified Crisis Command Centre.
+Escalate MY™ is a **Crisis Governance Platform** that helps organisations detect emerging incidents, coordinate executive decisions and maintain an auditable record of crisis response.
 
 Built for public listed companies, government-linked companies, regulated industries and enterprise leadership teams.
 
@@ -89,7 +89,7 @@ Recommendations only. Quorum before any external statement or filing.
 
 Escalate MY is **not** a communications platform.
 
-Escalate MY is a **Crisis Intelligence Platform** that helps Malaysian organisations make faster, better decisions during critical incidents.
+Escalate MY is a **Crisis Governance Platform** — powered by Crisis Intelligence — that helps Malaysian organisations make faster, better decisions during critical incidents.
 
 ---
 
