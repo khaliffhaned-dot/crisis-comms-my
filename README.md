@@ -111,15 +111,15 @@ Frontend calls the Worker at `/api/v1/intelligence/assess`.
 Default base (override with env):
 
 ```text
-VITE_API_BASE=https://escalate-my-api.khaliffhaned.workers.dev
+VITE_API_BASE=https://<your-worker>.workers.dev
 ```
 
-Set this on the Cloudflare Pages project **escalate-crisis-intel**, then redeploy.
+Set this as an environment variable on your Cloudflare Pages project, then redeploy. (Internal — ask the team for the project name and current Worker URL.)
 
 Health check:
 
 ```bash
-curl https://escalate-my-api.khaliffhaned.workers.dev/health
+curl https://<your-worker>.workers.dev/health
 ```
 
 If the API is unreachable, Decision Intelligence falls back to the local rules engine (`source: local`).
@@ -149,8 +149,8 @@ escalate_crisisintel/
 | | |
 |--|--|
 | **Web app** | https://escalate-my.pages.dev |
-| **API** | https://escalate-my-api.khaliffhaned.workers.dev |
-| **MCP** | https://escalate-my-mcp.khaliffhaned.workers.dev/mcp |
+| **API** | *Internal — see your Cloudflare dashboard (Workers & Pages → escalate-my-api) or ask the team.* |
+| **MCP** | *Internal — see your Cloudflare dashboard (Workers & Pages → escalate-my-mcp) or ask the team.* |
 
 Bilingual (Bahasa Malaysia + English) · Vite + React + TypeScript on Cloudflare Pages · Hono API on Workers · D1 · R2 · MCP
 
@@ -185,7 +185,7 @@ npm run dev
 
 ```bash
 npm run build
-npx wrangler pages deploy dist --project-name escalate-crisis-intel
+npx wrangler pages deploy dist --project-name <your-pages-project>
 ```
 
 Deploy API (includes the IncidentRoom Durable Object): `cd api && pnpm deploy:api` · Deploy MCP: `cd mcp-server && npm run deploy`
