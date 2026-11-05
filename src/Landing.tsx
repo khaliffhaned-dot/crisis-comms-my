@@ -12,6 +12,7 @@ import {
   Users,
   CheckCircle2,
 } from 'lucide-react'
+import DemoWalkthrough from './DemoWalkthrough'
 import './ops-dashboard.css'
 
 type Lang = 'bm' | 'en'
@@ -20,7 +21,6 @@ interface LandingProps {
   lang: Lang
   onEnterPlaybook: () => void
   onEnterManual: () => void
-  onStartDemo: () => void
   onToggleLang: () => void
 }
 
@@ -105,7 +105,7 @@ const PROOF = {
   ],
 }
 
-export default function Landing({ lang, onEnterPlaybook, onEnterManual, onStartDemo, onToggleLang }: LandingProps) {
+export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggleLang }: LandingProps) {
   const [navOpen, setNavOpen] = useState(false)
   const t = (en: string, bm: string) => (lang === 'bm' ? bm : en)
   const setLang = (next: Lang) => {
@@ -293,68 +293,24 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onStartD
           </div>
         </section>
 
-        <section className="ent-section ent-section--muted">
+        <section className="ent-section ent-section--muted" id="live-simulation">
           <div className="ent-wrap" style={{ textAlign: 'center' }}>
             <span className="ent-eyebrow">
               <span className="ent-eyebrow__dot" aria-hidden="true" />
               {t('See it in action', 'Lihat ia beraksi')}
             </span>
             <h2 className="ent-h2" style={{ marginBottom: '8px' }}>
-              {t('What Command Centre looks like mid-incident', 'Rupa Pusat Perintah semasa insiden')}
+              {t('Run the simulation right here', 'Jalankan simulasi di sini')}
             </h2>
             <p className="ent-lead ent-lead--center" style={{ marginBottom: '28px' }}>
               {t(
-                'An illustrative incident, not live data — the same view your team sees once logged in.',
-                'Insiden ilustrasi, bukan data langsung — paparan sama yang dilihat pasukan anda selepas log masuk.'
+                'Not a mockup — pick a signal below and watch Escalate assess it, live, in under 3 minutes.',
+                'Bukan tiruan — pilih satu isyarat di bawah dan lihat Escalate menilainya, secara langsung, dalam masa kurang 3 minit.'
               )}
             </p>
-            <div className="ops-dashboard ent-dashboard-preview" style={{ textAlign: 'left' }}>
-              <div className="ops-dashboard__top">
-                <div className="ops-dashboard__title-block">
-                  <div className="ops-status-row">
-                    <span className="ops-status-pill elevated">{t('Active · Level 3', 'Aktif · Tahap 3')}</span>
-                    <span className="ent-example-badge">{t('EXAMPLE INCIDENT', 'CONTOH INSIDEN')}</span>
-                  </div>
-                  <h3>{t('Incident command dashboard', 'Papan pemuka perintah insiden')}</h3>
-                  <p className="ops-context">
-                    {t('Product recall scenario · illustrative', 'Senario penarikan balik produk · ilustrasi')}
-                  </p>
-                </div>
-              </div>
-              <div className="ops-kpi-grid ent-dashboard-kpis">
-                <div className="ops-kpi">
-                  <div className="ops-kpi__label">{t('Severity', 'Keterukan')}</div>
-                  <div className="ops-kpi__value"><span className="sev-badge sev-3">L3</span></div>
-                  <div className="ops-kpi__meta">{t('Material impact likely', 'Kesan material berkemungkinan')}</div>
-                </div>
-                <div className="ops-kpi">
-                  <div className="ops-kpi__label">{t('Regulatory clock', 'Jam pengawalseliaan')}</div>
-                  <div className="ops-kpi__value">18<span className="ops-kpi__denom">h</span> 32<span className="ops-kpi__denom">m</span></div>
-                  <div className="ops-kpi__meta">{t('Bursa disclosure window', 'Tetingkap pendedahan Bursa')}</div>
-                </div>
-                <div className="ops-kpi">
-                  <div className="ops-kpi__label">{t('Decisions logged', 'Keputusan direkod')}</div>
-                  <div className="ops-kpi__value">12</div>
-                  <div className="ops-kpi__meta">{t('Hash-chained audit trail', 'Jejak audit rantaian cincang')}</div>
-                </div>
-                <div className="ops-kpi">
-                  <div className="ops-kpi__label">{t('Stakeholders active', 'Pihak berkepentingan aktif')}</div>
-                  <div className="ops-kpi__value">7</div>
-                  <div className="ops-kpi__meta">{t('Core quorum engaged', 'Kuorum teras terlibat')}</div>
-                </div>
-                <div className="ops-kpi">
-                  <div className="ops-kpi__label">{t('Open actions', 'Tindakan terbuka')}</div>
-                  <div className="ops-kpi__value">14</div>
-                  <div className="ops-kpi__meta">{t('First 60 Minutes tasks', 'Tugasan 60 Minit Pertama')}</div>
-                </div>
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', marginTop: '28px' }}>
-              <button type="button" className="ent-btn ent-btn--outline" onClick={onStartDemo}>
-                {t('Try it yourself — start a live simulation', 'Cuba sendiri — mulakan simulasi langsung')}
-                <ArrowRight size={16} strokeWidth={2.4} aria-hidden="true" />
-              </button>
-            </div>
+          </div>
+          <div className="ent-wrap" style={{ maxWidth: '920px' }}>
+            <DemoWalkthrough lang={lang} onToggleLang={onToggleLang} chrome="inline" />
           </div>
         </section>
 

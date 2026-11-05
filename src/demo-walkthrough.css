@@ -269,3 +269,46 @@
   padding: 0;
 }
 .demo-walk__restart-link:hover { color: #e5e7eb; }
+
+/* Inline chrome — embedded directly in Landing.tsx's "See it in action"
+   section, in the normal page scroll, not a full-viewport takeover. */
+.demo-walk--inline {
+  min-height: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04), 0 8px 28px rgba(20, 20, 20, 0.18);
+  /* Landing's own header is position: sticky, 72px tall (.ent-header) —
+     without this, scrolling or jumping to this widget leaves its own
+     "Live simulation" badge and step rail hidden behind that sticky bar. */
+  scroll-margin-top: 88px;
+}
+.demo-walk--inline .demo-walk__main {
+  padding: 2rem 1.5rem 2.5rem;
+}
+
+.demo-walk__live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #bbf7d0;
+}
+.demo-walk__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #4ade80;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+  animation: demo-walk-pulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-walk__live-dot { animation: none; }
+}
+@keyframes demo-walk-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(74, 222, 128, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
