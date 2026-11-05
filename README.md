@@ -15,13 +15,8 @@
 
 ## Live
 
-| | |
-|--|--|
-| **Web** | https://escalate-my.pages.dev |
-| **API** | https://escalate-my-api.khaliffhaned.workers.dev |
-| **MCP** | https://escalate-my-mcp.khaliffhaned.workers.dev/mcp |
+**[See it live →](https://escalate-my.pages.dev)** — run a guided, no-login simulation of a real incident, from the first signal to a board-ready summary, in under 3 minutes.
 
-Bilingual (Bahasa Malaysia + English) · Vite + React + TypeScript on Cloudflare Pages · Hono API on Workers · D1 · R2 · MCP
 **A product of [Quantum PR](api/docs/BRAND.md)** — crisis governance, reputation and decision support.
 
 ---
@@ -148,6 +143,16 @@ escalate_crisisintel/
 ```
 
 ---
+
+## For developers
+
+| | |
+|--|--|
+| **Web app** | https://escalate-my.pages.dev |
+| **API** | https://escalate-my-api.khaliffhaned.workers.dev |
+| **MCP** | https://escalate-my-mcp.khaliffhaned.workers.dev/mcp |
+
+Bilingual (Bahasa Malaysia + English) · Vite + React + TypeScript on Cloudflare Pages · Hono API on Workers · D1 · R2 · MCP
 
 ## Quick start
 

@@ -127,11 +127,11 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
           </div>
 
           <nav className={`ent-nav ${navOpen ? 'is-open' : ''}`} aria-label={t('Primary', 'Utama')}>
-            <a className="ent-nav__link" href="#features" onClick={closeNav}>
-              {t('Features', 'Ciri-ciri')}
-            </a>
             <a className="ent-nav__link" href="#how" onClick={closeNav}>
               {t('How it works', 'Cara Kerja')}
+            </a>
+            <a className="ent-nav__link" href="#features" onClick={closeNav}>
+              {t('Features', 'Ciri-ciri')}
             </a>
             <button
               type="button"
@@ -185,8 +185,8 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
               </h1>
               <p className="ent-lead">
                 {t(
-                  'Escalate MY is the operating system for Bursa-listed PLCs, GLCs and regulated industries. Assess severity, align quorum, and keep a full record of every decision.',
-                  'Escalate MY ialah sistem operasi untuk PLC tersenarai Bursa, GLC dan industri terkawal selia. Nilai keterukan, selaras kuorum, dan rekod setiap keputusan.'
+                  'A Bursa disclosure missed by minutes can cost millions in market value. Escalate MY helps you detect emerging incidents, mobilise decision-makers, and keep an auditable record of every response.',
+                  'Pendedahan Bursa yang terlepas dalam beberapa minit boleh menjejaskan nilai pasaran sehingga berjuta. Escalate MY membantu anda mengesan insiden yang berkembang, memobilisasi pembuat keputusan, dan mengekalkan rekod boleh audit bagi setiap respons.'
                 )}
               </p>
               <div className="ent-hero__cta">
@@ -251,6 +251,26 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
           </div>
         </section>
 
+        <section id="how" className="ent-section">
+          <div className="ent-wrap">
+            <h2 className="ent-h2">{t('How teams use it', 'Bagaimana pasukan menggunakannya')}</h2>
+            <div className="ent-grid-3">
+              {STEPS.map((s) => {
+                const copy = lang === 'bm' ? s.bm : s.en
+                return (
+                  <div className="ent-card ent-card--step" key={copy.title}>
+                    <span className="ent-step-num" aria-hidden="true">
+                      {s.n}
+                    </span>
+                    <h3 className="ent-card__title">{copy.title}</h3>
+                    <p className="ent-card__body">{copy.body}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
         <section id="features" className="ent-section ent-section--muted">
           <div className="ent-wrap">
             <h2 className="ent-h2">{t('Built for the first hour', 'Dibina untuk sejam pertama')}</h2>
@@ -266,26 +286,6 @@ export default function Landing({ lang, onEnterPlaybook, onEnterManual, onToggle
                     <h3 className="ent-card__title">{copy.title}</h3>
                     <p className="ent-card__body">{copy.body}</p>
                     {'meta' in copy && copy.meta && <p className="ent-card__meta">{copy.meta}</p>}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section id="how" className="ent-section">
-          <div className="ent-wrap">
-            <h2 className="ent-h2">{t('How teams use it', 'Bagaimana pasukan menggunakannya')}</h2>
-            <div className="ent-grid-3">
-              {STEPS.map((s) => {
-                const copy = lang === 'bm' ? s.bm : s.en
-                return (
-                  <div className="ent-card ent-card--step" key={copy.title}>
-                    <span className="ent-step-num" aria-hidden="true">
-                      {s.n}
-                    </span>
-                    <h3 className="ent-card__title">{copy.title}</h3>
-                    <p className="ent-card__body">{copy.body}</p>
                   </div>
                 )
               })}
