@@ -30,7 +30,7 @@ import {
   type ObligationRow,
 } from '@escalate-my/regulatory'
 import { generateAndStoreBrief, buildBoardInsights } from '@escalate-my/boardbrief'
-import { checkRole } from './authz'
+import { checkRole, requireOrgAccess } from './authz'
 import { IncidentRoom } from './incidentRoom'
 
 export { IncidentRoom }
@@ -216,8 +216,10 @@ app.post('/api/v1/signals', async (c) => {
 })
 
 app.get('/api/v1/organisations/:id/signals', async (c) => {
+  const orgId = c.req.param('id')
+  await requireOrgAccess(c.env, c.executionCtx, orgId)
   const status = c.req.query('status')
-  const items = await signalRepo(c.env).list(c.req.param('id'), status)
+  const items = await signalRepo(c.env).list(orgId, status)
   return c.json({ items })
 })
 
@@ -267,6 +269,7 @@ app.post('/api/v1/signals/:id/action', async (c) => {
   const actor = identity.actor || body.actor || 'Operator'
 
   const signal = await signalRepo(c.env).get(signalId)
+  await requireOrgAccess(c.env, c.executionCtx, signal.organisation_id)
   const svc = new IncidentService(c.env)
   let incident = await svc.create({
     organisation_id: signal.organisation_id,
@@ -295,6 +298,7 @@ app.post('/api/v1/signals/:id/dismiss', async (c) => {
   const actor = identity.actor || body.actor || 'Operator'
 
   const signal = await signalRepo(c.env).get(signalId)
+  await requireOrgAccess(c.env, c.executionCtx, signal.organisation_id)
   const updatedSignal = await signalRepo(c.env).dismiss(signalId, actor)
   await incidentRepo(c.env).writeAudit({
     organisation_id: signal.organisation_id,
@@ -367,6 +371,7 @@ app.post('/api/v1/incidents/:id/clocks/:clockId/toggle', async (c) => {
   }
   const repo = incidentRepo(c.env)
   const incident = await repo.get(incidentId)
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
   if (body.active) {
     await startObligationTracking(c.env.DB, incidentId, obligationId)
   } else {
@@ -386,6 +391,8 @@ app.post('/api/v1/incidents/:id/clocks/:clockId/toggle', async (c) => {
 
 /** Regulatory Clock™ — obligations tracked against one incident, with computed deadlines */
 app.get('/api/v1/incidents/:id/obligations', async (c) => {
+  const incident = await incidentRepo(c.env).get(c.req.param('id'))
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
   const res = await c.env.DB.prepare(
     `SELECT io.id, io.obligation_id, io.status, io.triggered_at, io.deadline_at, io.escalated_at,
             o.regulator, o.code, o.title_en, o.title_bm
@@ -451,6 +458,7 @@ app.post('/api/v1/intelligence/assess', async (c) => {
 app.get('/api/v1/intelligence/board/:incidentId', async (c) => {
   const svc = new IncidentService(c.env)
   const incident = await svc.get(c.req.param('incidentId'))
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
   const quorum = await c.env.DB.prepare(`SELECT * FROM quorum_responses WHERE incident_id = ?`)
     .bind(incident.id)
     .all()
@@ -470,6 +478,7 @@ app.get('/api/v1/intelligence/board/:incidentId', async (c) => {
 app.get('/api/v1/incidents', async (c) => {
   const org = c.req.query('organisation_id')
   if (!org) return c.json({ error: 'organisation_id required' }, 400)
+  await requireOrgAccess(c.env, c.executionCtx, org)
   const svc = new IncidentService(c.env)
   const items = await svc.listActive(org)
   const full = c.req.query('full') === 'true'
@@ -526,6 +535,8 @@ app.post('/api/v1/incidents/:id/save', async (c) => {
     actor?: string
   }>()
   const repo = incidentRepo(c.env)
+  const before = await repo.get(incidentId)
+  await requireOrgAccess(c.env, c.executionCtx, before.organisation_id)
   const identity = await resolveIdentity(c.executionCtx)
   const actor = identity.actor || body.actor || 'Operator'
 
@@ -540,7 +551,6 @@ app.post('/api/v1/incidents/:id/save', async (c) => {
       statement: body.incident.statement,
       statement_lang: body.incident.statement_lang,
     })
-    const before = await repo.get(incidentId)
     await repo.writeAudit({
       organisation_id: before.organisation_id,
       incident_id: incidentId,
@@ -582,6 +592,7 @@ app.post('/api/v1/incidents/:id/save', async (c) => {
 app.get('/api/v1/incidents/:id', async (c) => {
   const svc = new IncidentService(c.env)
   const item = await svc.get(c.req.param('id'))
+  await requireOrgAccess(c.env, c.executionCtx, item.organisation_id)
   return c.json({ item })
 })
 
@@ -648,6 +659,7 @@ app.patch('/api/v1/incidents/:id', async (c) => {
   }
   const repo = incidentRepo(c.env)
   const before = await repo.get(incidentId)
+  await requireOrgAccess(c.env, c.executionCtx, before.organisation_id)
   const item = await repo.update(incidentId, {
     title: body.title,
     status: body.status as any,
@@ -682,8 +694,9 @@ app.get('/api/v1/incidents/:id/full', async (c) => {
   const incidentId = c.req.param('id')
   const svc = new IncidentService(c.env)
   const repo = incidentRepo(c.env)
-  const [incident, tasks, quorum, audit, obligationRows] = await Promise.all([
-    svc.get(incidentId),
+  const incident = await svc.get(incidentId)
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
+  const [tasks, quorum, audit, obligationRows] = await Promise.all([
     svc.tasks(incidentId),
     repo.listQuorum(incidentId),
     repo.listAudit(incidentId),
@@ -707,6 +720,8 @@ app.get('/api/v1/incidents/:id/full', async (c) => {
  */
 app.get('/api/v1/incidents/:id/live', async (c) => {
   const incidentId = c.req.param('id')
+  const incident = await incidentRepo(c.env).get(incidentId)
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
   const stub = c.env.INCIDENT_ROOM.get(c.env.INCIDENT_ROOM.idFromName(incidentId))
   const url = new URL(c.req.url)
   url.searchParams.set('room', incidentId)
@@ -728,8 +743,11 @@ app.get('/api/v1/first60', (c) => {
 
 /** First Sixty Minutes™ — this incident's 13-step checklist, with computed due_at and escalation state */
 app.get('/api/v1/incidents/:id/tasks', async (c) => {
+  const incidentId = c.req.param('id')
+  const incident = await incidentRepo(c.env).get(incidentId)
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
   const svc = new IncidentService(c.env)
-  const items = await svc.tasks(c.req.param('id'))
+  const items = await svc.tasks(incidentId)
   return c.json({ items })
 })
 
@@ -743,6 +761,7 @@ app.patch('/api/v1/incidents/:id/tasks/:taskId', async (c) => {
   }
   const repo = incidentRepo(c.env)
   const incident = await repo.get(incidentId)
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
   const task = await repo.updateTaskStatus(taskId, body.status as any)
   const identity = await resolveIdentity(c.executionCtx)
   await repo.writeAudit({
@@ -792,6 +811,8 @@ app.post('/api/v1/approved-responses', async (c) => {
   if (!body.incident_id || !body.type || !body.company) {
     return c.json({ error: 'incident_id, type and company required' }, 400)
   }
+  const gateIncident = await incidentRepo(c.env).get(body.incident_id)
+  await requireOrgAccess(c.env, c.executionCtx, gateIncident.organisation_id)
   const svc = new IncidentService(c.env)
   const result = await svc.approvedResponse({
     incidentId: body.incident_id,
@@ -808,6 +829,7 @@ app.post('/api/v1/reports/board-brief', async (c) => {
   if (!body.incident_id) return c.json({ error: 'incident_id required' }, 400)
   const svc = new IncidentService(c.env)
   const incident = await svc.get(body.incident_id)
+  await requireOrgAccess(c.env, c.executionCtx, incident.organisation_id)
   const kind = (body.kind as any) || 'situation_report'
   const identity = await resolveIdentity(c.executionCtx)
   const result = await generateAndStoreBrief(c.env, incident, kind, identity.actor || body.actor)

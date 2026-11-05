@@ -20,3 +20,9 @@ export class ValidationError extends AppError {
     super(message, 400, 'VALIDATION')
   }
 }
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Not authorized for this organisation') {
+    super(message, 403, 'FORBIDDEN')
+  }
+}
