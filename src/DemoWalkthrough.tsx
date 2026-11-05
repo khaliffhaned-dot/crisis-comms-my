@@ -17,18 +17,16 @@ import './demo-walkthrough.css'
 interface Props {
   lang: Lang
   onToggleLang: () => void
-  onExit: () => void
-  /** Not called in standalone mode — the public demo never hands a prospect into the real app. Optional so PublicDemo.tsx doesn't need a stub. */
-  onEnterApp?: (incidentId: string) => void
   /**
-   * True for the public, no-login /demo route (PublicDemo.tsx): adds a
-   * terminal "Board Summary" step with a conversion CTA instead of handing
-   * the visitor into the real Command Centre. False (default) for the
-   * embedded "Try it yourself" demo reached from inside the marketing
-   * Landing page, which still ends by entering the real app — that visitor
-   * already chose to explore the full product.
+   * 'inline' — embedded directly in the Landing page's own scroll (see
+   * Landing.tsx's "See it in action" section): contained card, no "Exit
+   * simulation" button (there's nothing to exit to, it's already on the
+   * page). 'full' — the dedicated, shareable /demo route (PublicDemo.tsx):
+   * full-viewport takeover with an exit button back to '/'.
    */
-  standalone?: boolean
+  chrome: 'inline' | 'full'
+  /** Required when chrome='full' (there's a real page to go back to); ignored when chrome='inline'. */
+  onExit?: () => void
 }
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7
@@ -71,7 +69,7 @@ function threeRClass(level: ThreeRLevel): string {
   return 'sev-chip sev-chip-closed'
 }
 
-export default function DemoWalkthrough({ lang, onToggleLang, onExit, onEnterApp, standalone = false }: Props) {
+export default function DemoWalkthrough({ lang, onToggleLang, chrome, onExit }: Props) {
   const t = (en: string, bm: string) => (lang === 'bm' ? bm : en)
 
   const [step, setStep] = useState<Step>(1)
@@ -150,14 +148,21 @@ export default function DemoWalkthrough({ lang, onToggleLang, onExit, onEnterApp
   }
 
   return (
-    <div className="demo-walk">
+    <div className={`demo-walk ${chrome === 'inline' ? 'demo-walk--inline' : ''}`}>
       <header className="demo-walk__header">
-        <button type="button" className="demo-walk__back" onClick={onExit}>
-          <ArrowLeft size={16} strokeWidth={2.2} />
-          {t('Exit simulation', 'Keluar simulasi')}
-        </button>
+        {chrome === 'full' ? (
+          <button type="button" className="demo-walk__back" onClick={onExit}>
+            <ArrowLeft size={16} strokeWidth={2.2} />
+            {t('Exit simulation', 'Keluar simulasi')}
+          </button>
+        ) : (
+          <span className="demo-walk__live-badge">
+            <span className="demo-walk__live-dot" aria-hidden="true" />
+            {t('Live simulation', 'Simulasi langsung')}
+          </span>
+        )}
         <div className="demo-walk__steps">
-          {((standalone ? [1, 2, 3, 4, 5, 6, 7] : [1, 2, 3, 4, 5, 6]) as Step[]).map((s) => (
+          {([1, 2, 3, 4, 5, 6, 7] as Step[]).map((s) => (
             <span key={s} className={`demo-walk__step ${s === step ? 'is-active' : ''} ${s < step ? 'is-done' : ''}`}>
               {STEP_LABELS[s][lang]}
             </span>
@@ -178,23 +183,16 @@ export default function DemoWalkthrough({ lang, onToggleLang, onExit, onEnterApp
               <span className="ops-status-pill idle">{t('Normal Operations', 'Operasi Normal')}</span>
             </div>
             <h1>
-              {standalone
-                ? t(
-                    'What if your organisation knew about a crisis 15 minutes earlier?',
-                    'Bagaimana jika organisasi anda mengetahui krisis 15 minit lebih awal?'
-                  )
-                : t('Escalate MY — Command Centre', 'Escalate MY — Pusat Perintah')}
+              {t(
+                'What if your organisation knew about a crisis 15 minutes earlier?',
+                'Bagaimana jika organisasi anda mengetahui krisis 15 minit lebih awal?'
+              )}
             </h1>
             <p className="demo-walk__lead">
-              {standalone
-                ? t(
-                    'Escalate converts early warning signals into governed incidents with a documented decision trail. This is a live simulation — not a slideshow.',
-                    'Escalate menukar isyarat amaran awal kepada insiden bertadbir urus dengan jejak keputusan yang direkod. Ini simulasi langsung — bukan tayangan slaid.'
-                  )
-                : t(
-                    'Escalate MY does not monitor news. It converts trusted external signals into governed incident response — with human oversight, documented decisions, regulatory awareness, and executive accountability.',
-                    'Escalate MY tidak memantau berita. Ia menukar isyarat luaran dipercayai kepada respons insiden bertadbir urus — dengan pengawasan manusia, keputusan direkod, kesedaran pengawalseliaan, dan akauntabiliti eksekutif.'
-                  )}
+              {t(
+                'Escalate converts early warning signals into governed incidents with a documented decision trail. This is a live simulation — not a slideshow.',
+                'Escalate menukar isyarat amaran awal kepada insiden bertadbir urus dengan jejak keputusan yang direkod. Ini simulasi langsung — bukan tayangan slaid.'
+              )}
             </p>
             <div className="ops-kpi-grid demo-walk__kpis">
               <div className="ops-kpi">
@@ -390,21 +388,14 @@ export default function DemoWalkthrough({ lang, onToggleLang, onExit, onEnterApp
               <div className="demo-walk__activated-item"><CheckCircle2 size={18} /> {t('First 60 Minutes checklist', 'Senarai semak 60 Minit Pertama')}</div>
               <div className="demo-walk__activated-item"><ClockIcon size={18} /> {t('Regulatory review timer', 'Pemasa semakan pengawalseliaan')}</div>
             </div>
-            {standalone ? (
-              <button type="button" className="btn btn-primary" onClick={() => setStep(7)}>
-                {t('View board summary', 'Lihat ringkasan lembaga')}
-                <ArrowRight size={15} />
-              </button>
-            ) : (
-              <button type="button" className="btn btn-primary" onClick={() => onEnterApp?.(incidentId)}>
-                {t('Continue to Executive Command Centre', 'Teruskan ke Pusat Perintah Eksekutif')}
-                <ArrowRight size={15} />
-              </button>
-            )}
+            <button type="button" className="btn btn-primary" onClick={() => setStep(7)}>
+              {t('View board summary', 'Lihat ringkasan lembaga')}
+              <ArrowRight size={15} />
+            </button>
           </section>
         )}
 
-        {step === 7 && standalone && signal && (
+        {step === 7 && signal && (
           <section className="demo-walk__panel">
             <span className="demo-walk__eyebrow">{t('Board summary — generated', 'Ringkasan lembaga — dijana')}</span>
             <h1>{t('Board-ready in under 3 minutes', 'Sedia untuk lembaga dalam masa kurang 3 minit')}</h1>

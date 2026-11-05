@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Menu, X } from 'lucide-react'
 import Landing from './Landing'
-import DemoWalkthrough from './DemoWalkthrough'
 import Manual from './Manual'
 import First60Module from './First60Module'
 import ClocksModule from './ClocksModule'
@@ -103,13 +103,21 @@ function NavIcon({ icon }: { icon: CoreNavItem['icon'] }) {
 
 export default function CoreShell() {
   const [lang, setLang] = useState<Lang>('en')
-  const [mode, setMode] = useState<'landing' | 'app' | 'demo'>('landing')
+  const [mode, setMode] = useState<'landing' | 'app'>('landing')
 
   useEffect(() => {
     document.documentElement.lang = lang === 'bm' ? 'ms' : 'en'
   }, [lang])
 
   const [section, setSection] = useState<CoreSection>('command')
+  /** Mobile-only: the sidebar nav is collapsed by default under 900px (viewports skill — chrome
+   * collapses on narrow) and opens as an inline drawer via this toggle, same interaction as
+   * Landing.tsx's .ent-menu-btn/.ent-nav. Closes itself once a section is picked. */
+  const [navOpen, setNavOpen] = useState(false)
+  const selectSection = (id: CoreSection) => {
+    setSection(id)
+    setNavOpen(false)
+  }
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -310,22 +318,7 @@ export default function CoreShell() {
           setSection('manual')
           setMode('app')
         }}
-        onStartDemo={() => setMode('demo')}
         onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
-      />
-    )
-  }
-
-  if (mode === 'demo') {
-    return (
-      <DemoWalkthrough
-        lang={lang}
-        onToggleLang={() => setLang((p) => (p === 'bm' ? 'en' : 'bm'))}
-        onExit={() => setMode('landing')}
-        onEnterApp={async (incidentId) => {
-          await onSignalIncidentCreated(incidentId)
-          setMode('app')
-        }}
       />
     )
   }
@@ -335,7 +328,7 @@ export default function CoreShell() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${navOpen ? 'sidebar--open' : ''}`}>
         <div className="sidebar__header">
           <div className="sidebar__logo-wrapper">
             <span className="sidebar__title" onClick={() => setMode('landing')}>
@@ -347,7 +340,7 @@ export default function CoreShell() {
         <nav className="sidebar__nav">
           <div className="nav-pillar">
             {CORE_MODULES.filter((m) => m.group === 'core').map((m) => (
-              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
+              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => selectSection(m.id)}>
                 <span className="nav-item__content">
                   <span className="nav-item__icon"><NavIcon icon={m.icon} /></span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
@@ -357,7 +350,7 @@ export default function CoreShell() {
           </div>
           <div className="nav-pillar">
             {CORE_MODULES.filter((m) => m.group === 'intel').map((m) => (
-              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
+              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => selectSection(m.id)}>
                 <span className="nav-item__content">
                   <span className="nav-item__icon"><NavIcon icon={m.icon} /></span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
@@ -367,7 +360,7 @@ export default function CoreShell() {
           </div>
           <div className="nav-pillar">
             {CORE_MODULES.filter((m) => m.group === 'ref').map((m) => (
-              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => setSection(m.id)}>
+              <button key={m.id} type="button" className={`nav-item ${section === m.id ? 'active-parent' : ''}`} onClick={() => selectSection(m.id)}>
                 <span className="nav-item__content">
                   <span className="nav-item__icon"><NavIcon icon={m.icon} /></span>
                   <span className="nav-item__text">{lang === 'bm' ? m.bm : m.en}</span>
@@ -385,6 +378,15 @@ export default function CoreShell() {
 
       <div className="main-wrapper">
         <header className="shell-header">
+          <button
+            type="button"
+            className="sidebar__menu-btn"
+            onClick={() => setNavOpen((v) => !v)}
+            aria-label={navOpen ? t('Close menu', 'Tutup menu') : t('Open menu', 'Buka menu')}
+            aria-expanded={navOpen}
+          >
+            {navOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
           <h2>{title}</h2>
           <div className="shell-header__actions">
             {active && (
