@@ -1,0 +1,136 @@
+/* /why-escalate — category positioning page. Reuses landing-light.css's
+   .ent-* tokens/components (header, hero eyebrow/h1, chips, cards, CTA
+   band, footer) for visual consistency with the main Landing page; these
+   are the handful of page-specific additions (comparison table, the
+   Detect->Mobilise->Govern gap steps, spacing). */
+
+.why-hero {
+  padding-top: 64px;
+  padding-bottom: 32px;
+}
+
+/* Comparison table — a visible L1 surface with hairlines, per page-
+   patterns' Compare catalog ("Nav -> comparison table -> CTA -> footer").
+   Scrolls horizontally inside its own region on narrow screens rather
+   than squeezing columns or overflowing the page (marketing.md's Narrow
+   rule: "Compare tables scroll inside their region"). */
+.why-compare-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--ent-border);
+  border-radius: 14px;
+  box-shadow: var(--ent-shadow-sm);
+}
+.why-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+  background: var(--ent-surface);
+}
+.why-compare-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ent-ink-muted);
+  padding: 14px 20px;
+  background: var(--ent-bg-muted);
+  border-bottom: 1px solid var(--ent-border);
+}
+.why-compare-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ent-border);
+  font-size: 14px;
+  color: var(--ent-ink);
+  vertical-align: top;
+}
+.why-compare-table tr:last-child td {
+  border-bottom: none;
+}
+.why-compare-table__category {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.why-compare-table__category svg {
+  color: var(--ent-ink-muted);
+  flex-shrink: 0;
+}
+.why-compare-table__muted {
+  color: var(--ent-ink-body);
+}
+.why-compare-table__role {
+  color: var(--ent-accent-hover);
+  font-weight: 600;
+}
+
+/* Detect -> Mobilise -> Govern gap steps */
+.why-gap-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 24px 0 28px;
+}
+.why-gap-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.why-gap-step__label {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  border: 1px solid var(--ent-border);
+  background: var(--ent-surface);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ent-ink);
+}
+.why-gap-step__arrow {
+  color: var(--ent-ink-muted);
+  flex-shrink: 0;
+}
+.why-gap-copy {
+  max-width: 520px;
+  margin: 0 auto;
+  color: var(--ent-ink-body);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.why-gap-copy p {
+  margin: 0 0 6px;
+}
+.why-gap-copy__emphasis {
+  color: var(--ent-ink);
+  font-weight: 700;
+}
+
+.why-audience-list {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.why-cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 20px;
+}
+.why-cta-row a.ent-btn {
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .why-hero { padding-top: 40px; }
+  .why-gap-step { gap: 8px; }
+}
