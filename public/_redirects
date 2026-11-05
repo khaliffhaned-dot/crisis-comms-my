@@ -1,0 +1,5 @@
+# SPA fallback for Cloudflare Pages — this is a client-side-routed app
+# (src/App.tsx reads window.location.pathname directly, no router library).
+# Without this, a direct hit on /demo (e.g. from a social post link) 404s
+# instead of loading index.html and letting App.tsx pick the right screen.
+/*    /index.html   200
