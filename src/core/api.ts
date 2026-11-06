@@ -199,9 +199,19 @@ export function appendAudit(inc: Incident, actor: string, action: string, detail
   }
 }
 
+function localIncidents(): Incident[] {
+  let list = loadLocal()
+  if (!list.length) {
+    list = [newIncident({ title: 'Demo · market speculation', severity: 2, scenario: 'market', status: 'open' })]
+    saveLocal(list)
+  }
+  return list
+}
+
 export async function listIncidents(): Promise<Incident[]> {
   const base = apiBase()
   if (base) {
+    try {
     // Each item is FullIncidentPayload-shaped ({ incident, tasks, quorum,
     // audit, clocks }), same as the single-incident /full endpoint — not
     // pre-flattened to the frontend's Incident shape, so it goes through
@@ -216,14 +226,12 @@ export async function listIncidents(): Promise<Incident[]> {
       items?: FullIncidentPayload[]
     }
     return (payload.items ?? []).map(incidentFromFull)
+    } catch {
+      return localIncidents()
+    }
   }
 
-  let list = loadLocal()
-  if (!list.length) {
-    list = [newIncident({ title: 'Demo · market speculation', severity: 2, scenario: 'market', status: 'open' })]
-    saveLocal(list)
-  }
-  return list
+  return localIncidents()
 }
 
 export async function getIncident(id: string): Promise<Incident | null> {
